@@ -118,6 +118,10 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Name("User management").
 		Handler(http.StripPrefix("/user-management", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/server-version").
+		Methods("GET").
+		Name("Server version").
+		Handler(http.StripPrefix("/server-version", http.FileServer(http.Dir("./app/"))))
 	subRouter.Path("/help").
 		Methods("GET").
 		Name("Help").
@@ -290,6 +294,37 @@ var apiRoutes = Routes{
 		"POST",
 		"/settings/update",
 		UpdateServerSettings,
+		false,
+	},
+	{
+		"GetCurrentVersion",
+		"GET",
+		"/server/version/current",
+		GetCurrentVersion,
+		false,
+	}, {
+		"GetAvailableVersions",
+		"GET",
+		"/server/version/available",
+		GetAvailableVersions,
+		false,
+	}, {
+		"GetFullVersionList",
+		"GET",
+		"/server/version/list",
+		GetFullVersionList,
+		false,
+	}, {
+		"InstallVersion",
+		"POST",
+		"/server/version/install",
+		InstallVersion,
+		true,
+	}, {
+		"GetInstallStatus",
+		"GET",
+		"/server/version/install-status",
+		GetInstallStatus,
 		false,
 	},
 	// Mod Portal Stuff

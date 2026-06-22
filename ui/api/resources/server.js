@@ -1,10 +1,4 @@
-import client from "../client";
-
 export default {
-    availableVersions: async () => {
-        const response = await client.get('/api/server/availableVersions');
-        return response.data;
-    },
     factorioVersion: async () => {
         const response = await client.get('/api/server/facVersion');
         return response.data;
@@ -25,16 +19,30 @@ export default {
         });
         return response.data;
     },
-    installVersion: async (version) => {
-        const response = await client.post('/api/server/install', {version});
-        return response.data;
-    },
-    removeInstallation: async () => {
-        const response = await client.delete('/api/server/install');
-        return response.data;
-    },
     kill: async () => {
         const response = await client.get('/api/server/kill');
         return response.data;
+    },
+    version: {
+        current: async () => {
+            const response = await client.get('/api/server/version/current');
+            return response.data;
+        },
+        available: async () => {
+            const response = await client.get('/api/server/version/available');
+            return response.data;
+        },
+        list: async () => {
+            const response = await client.get('/api/server/version/list');
+            return response.data;
+        },
+        install: async (version) => {
+            const response = await client.post('/api/server/version/install', { version });
+            return response.data;
+        },
+        installStatus: async () => {
+            const response = await client.get('/api/server/version/install-status');
+            return response.data;
+        }
     }
-}
+};

@@ -14,6 +14,7 @@ import UserManagement from "./views/UserManagement/UserManagment";
 import ServerSettings from "./views/ServerSettings";
 import GameSettings from "./views/GameSettings";
 import Console from "./views/Console";
+import ServerVersion from "./views/ServerVersion";
 import Help from "./views/Help";
 import socket from "../api/socket";
 import "./i18n";
@@ -69,7 +70,8 @@ const App = () => {
                         <Route path="console" element={<Console serverStatus={serverStatus}/>}/>
                         <Route path="logs" element={<Logs serverStatus={serverStatus}/>}/>
                         <Route path="user-management" element={<UserManagement serverStatus={serverStatus}/>}/>
-                        <Route path="help" element={<Help serverStatus={serverStatus}/>}/>
+                        <Route path="server-version" element={<ServerVersion serverStatus={serverStatus}/>}/>
+<Route path="help" element={<Help serverStatus={serverStatus}/>}/>
                     </Route>
                 </Route>
             </Routes>
