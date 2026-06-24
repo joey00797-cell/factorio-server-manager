@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -849,14 +850,48 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
     defer dlResp.Body.Close()
     io.Copy(out, dlResp.Body)
 
-    cmd := exec.Command("tar", "-xf", "/tmp/factorio_install.tar.xz", "-C", filepath.Dir(config.FactorioDir))
+    extractDir := config.FactorioDir
+    log.Printf("Extracting Factorio to: %s", extractDir)
+    os.MkdirAll(extractDir, 0755)
+    cmd := exec.Command("tar", "-xf", "/tmp/factorio_install.tar.xz", "-C", extractDir, "--strip-components=1")
     if err := cmd.Run(); err != nil {
         w.WriteHeader(http.StatusInternalServerError)
         resp = fmt.Sprintf("Error extracting Factorio: %s", err)
         return
     }
+    // Копируем server-settings.json из примера
+    settingsDst := config.SettingsFile
+    exampleSrc := filepath.Join(extractDir, "data", "server-settings.example.json")
+    os.MkdirAll(filepath.Dir(settingsDst), 0755)
+    if src, err2 := os.ReadFile(exampleSrc); err2 == nil {
+        // Перезаписываем только если файл пустой или содержит null
+        existingData, _ := os.ReadFile(settingsDst)
+        trimmed := strings.TrimSpace(string(existingData))
+        if trimmed == "" || trimmed == "null" || len(trimmed) < 10 {
+            os.WriteFile(settingsDst, src, 0644)
+            log.Printf("server-settings.json создан из примера")
+            // Перезагружаем настройки в памяти
+            srv := factorio.GetFactorioServer()
+            if f, err2 := os.Open(settingsDst); err2 == nil {
+                json.NewDecoder(f).Decode(&srv.Settings)
+                f.Close()
+                log.Printf("server-settings.json загружен в память")
+            }
+        }
+    } else {
+        log.Printf("Не удалось найти example: %v", err2)
+    }
 
     os.Remove("/tmp/factorio_install.tar.xz")
+
+
+
+    // Обновляем версию в существующем экземпляре сервера
+    server := factorio.GetFactorioServer()
+    if err := server.RefreshVersion(); err != nil {
+        log.Printf("Не удалось обновить версию: %v", err)
+    }
+    
     resp = fmt.Sprintf("Factorio %s installed successfully", data.Version)
     log.Println(resp)
 }

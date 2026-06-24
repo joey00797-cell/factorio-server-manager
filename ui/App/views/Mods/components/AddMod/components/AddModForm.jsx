@@ -8,6 +8,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faExternalLinkAlt} from "@fortawesome/free-solid-svg-icons/faExternalLinkAlt";
 import {faSpinner} from "@fortawesome/free-solid-svg-icons";
 import SelectVersionForm from "./SelectVersionForm";
+import { useTranslation } from "react-i18next";
 
 const LinkModPortal = () => {
     return <a href="https://mods.factorio.com" target="_blank" className="px-2 text-blue hover:text-blue-light">Mod
@@ -15,7 +16,7 @@ const LinkModPortal = () => {
 }
 
 const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) => {
-
+    const { t } = useTranslation();
     const {register, watch, setValue, handleSubmit} = useForm();
     const [suggestedMods, setSuggestedMods] = useState([]);
     const [selectedMod, setSelectedMod] = useState(null);
@@ -101,11 +102,11 @@ const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) =>
         <form onSubmit={handleSubmit(openSelectVersionModal)}>
             <SelectVersionForm isOpen={isModalOpen} releases={releases} install={install} close={() => setIsModalOpen(false)}/>
             <div className="mb-4 relative" >
-                <Label text="Mod" htmlFor="mod"/>
+                <Label text={t("mods.title")} htmlFor="mod"/>
                 { typeof fuse !== "undefined"
                     ? <Input register={register('mod',{required: true})} hasAutoComplete={false} onKeyDown={handleKeyDown}/>
                     : <div className="border border-gray-medium w-full py-2 px-3 text-white">
-                        <FontAwesomeIcon icon={faSpinner} spin={true}/> Loading List of Mods from <LinkModPortal/>
+                        <FontAwesomeIcon icon={faSpinner} spin={true}/> {t("mods.add_mod.loading_mod_list")} <LinkModPortal/>
                     </div>
                 }
                 {suggestedMods.length > 0 &&
@@ -114,8 +115,8 @@ const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) =>
                     </ul>
                 }
             </div>
-            <Button isDisabled={selectedMod === null} isSubmit={true} onClick={() => setIsModalOpen(true)} className="mr-2">Install</Button>
-            <Button onClick={logout} type="danger" className="mr-2">Logout</Button>
+            <Button isDisabled={selectedMod === null} isSubmit={true} onClick={() => setIsModalOpen(true)} className="mr-2">{t("install")}</Button>
+            <Button onClick={logout} type="danger" className="mr-2">{t("logout")}</Button>
             <LinkModPortal/>
         </form>
     )

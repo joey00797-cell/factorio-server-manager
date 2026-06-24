@@ -5,8 +5,10 @@ import saves from "../../../../api/resources/saves";
 import Label from "../../../components/Label";
 import Input from "../../../components/Input";
 import Error from "../../../components/Error";
+import { useTranslation } from "react-i18next";
 
 const CreateSaveForm = ({onSuccess}) => {
+    const { t } = useTranslation();
     const {register, handleSubmit, formState: {errors}} = useForm();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -23,11 +25,11 @@ const CreateSaveForm = ({onSuccess}) => {
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-6">
-                <Label text="Savefile Name" htmlFor="savefile"/>
+                <Label text={t("saves.save_form.file_name")} htmlFor="savefile"/>
                 <Input register={register('savefile', {required: true})}/>
-                <Error error={errors.savefile} message="Savefile Name is required"/>
+                <Error error={errors.savefile} message={t("saves.save_form.save_file_error_message")}/>
             </div>
-            <Button type="success" isLoading={isLoading} isSubmit={true}>Create Save</Button>
+            <Button type="success" isLoading={isLoading} isSubmit={true}>{t("saves.save_form.create_save")}</Button>
         </form>
     )
 }

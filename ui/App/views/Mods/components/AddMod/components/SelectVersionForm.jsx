@@ -5,8 +5,10 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faCloudDownloadAlt} from "@fortawesome/free-solid-svg-icons/faCloudDownloadAlt";
 import {faCheck} from "@fortawesome/free-solid-svg-icons/faCheck";
 import {faTimes} from "@fortawesome/free-solid-svg-icons/faTimes";
+import { useTranslation } from "react-i18next";
 
 const SelectVersionForm = ({releases, isOpen, close, install}) => {
+    const { t } = useTranslation();
 
     const download = release => {
         install(release)
@@ -16,7 +18,7 @@ const SelectVersionForm = ({releases, isOpen, close, install}) => {
     return (
         <Modal
             isOpen={isOpen}
-            title="Select Version"
+            title={t("mods.add_mod.version")}
             content={
                 <div className="h-64 overflow-y-auto">
                     <table className="w-full">

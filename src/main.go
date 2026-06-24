@@ -20,8 +20,7 @@ func main() {
 	// Initialize Factorio Server struct
 	err := factorio.NewFactorioServer()
 	if err != nil {
-		log.Printf("Error occurred during Server initialization: %v\n", err)
-		return
+		log.Printf("Factorio не установлен, запускаемся без сервера. Установите через веб-интерфейс.")
 	}
 
 	// Initialize authentication system

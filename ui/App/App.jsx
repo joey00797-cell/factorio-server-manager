@@ -17,6 +17,7 @@ import Console from "./views/Console";
 import Help from "./views/Help";
 import socket from "../api/socket";
 import "./i18n";
+import { useTranslation } from "react-i18next";
 import {Flash} from "./components/Flash";
 
 
@@ -24,6 +25,7 @@ const App = () => {
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [serverStatus, setServerStatus] = useState(null);
+
 
     const handleAuthenticationStatus = useCallback(async (status) => {
         if (status?.username) {

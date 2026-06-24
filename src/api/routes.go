@@ -461,5 +461,29 @@ var apiRoutes = Routes{
 		"/mods/packs/{modpack}/portal/install/multiple",
 		ModPackModPortalInstallMultipleHandler,
 		false,
+	}, {
+		"LocalesList",
+		"GET",
+		"/locales/list",
+		LocalesListHandler,
+		false,
+	}, {
+		"LocalesTemplate",
+		"GET",
+		"/locales/template",
+		LocalesTemplateHandler,
+		false,
+	}, {
+		"LocalesGet",
+		"GET",
+		"/locales/{lang}",
+		LocalesGetHandler,
+		false,
+	}, {
+		"LocalesUpload",
+		"POST",
+		"/locales/upload",
+		LocalesUploadHandler,
+		false,
 	},
 }

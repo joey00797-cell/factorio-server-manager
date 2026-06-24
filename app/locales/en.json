@@ -109,10 +109,7 @@
         "save": "Save",
         "save&stop": "Save & Stop Server",
         "kill_server": "Kill Server",
-        "start_server": "Start Server",
-        "autostart": "Autostart",
-        "install_factorio": "Install Factorio",
-        "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio»."
+        "start_server": "Start Server"
     },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",
@@ -163,8 +160,6 @@
         "username_error_message": "Username is required",
         "password_error_message": "Password is required",
         "sign_in": "Sign In",
-        "password_or_token": "Password or Token",
-        "factorio_credentials_validation_error": "Factorio accepted the login request, but the saved credentials could not be validated.",
         "factorio_login_error_message": "Given username or email and password do not match any account."
     },
     "console": {
@@ -214,8 +209,5 @@
     "lang_upload": "Upload Language",
     "lang_uploading": "Uploading...",
     "lang_upload_ok": "Language uploaded!",
-    "lang_upload_err": "Upload error",
-    "lang_download_current": "Download this language",
-    "lang_apply_question": "Apply the uploaded language?",
-    "lang_overwrite_question": "File already exists. Replace it?"
+    "lang_upload_err": "Upload error"
 }

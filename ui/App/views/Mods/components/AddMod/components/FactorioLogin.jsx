@@ -4,31 +4,21 @@ import Input from "../../../../../components/Input";
 import Label from "../../../../../components/Label";
 import Button from "../../../../../components/Button";
 import modsResource from "../../../../../../api/resources/mods";
-import {useTranslation} from "react-i18next";
+import { useTranslation } from "react-i18next";
 
 const FactorioLogin = ({setIsFactorioAuthenticated}) => {
-
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const {register, handleSubmit} = useForm();
     const [isLoading, setIsLoading] = useState(false);
 
     const login = async ({username, token}) => {
         setIsLoading(true);
-        setIsFactorioAuthenticated(false);
-
-        try {
-            await modsResource.portal.login(username, token);
-            const isAuthenticated = await modsResource.portal.status();
-            setIsFactorioAuthenticated(isAuthenticated);
-
-            if (!isAuthenticated) {
-                window.flash(t("login.factorio_credentials_validation_error"), "red");
-            }
-        } catch (err) {
-            window.flash(err.response?.data || t("login.factorio_login_error_message"), "red");
-        } finally {
-            setIsLoading(false);
-        }
+        modsResource.portal.login(username, token)
+            .then(res => {
+                setIsFactorioAuthenticated(true)
+            })
+            .catch(() => window.flash(t("login.factorio_login_error_message"), "red"))
+            .finally(() => setIsLoading(false));
     }
 
     return (
@@ -39,7 +29,7 @@ const FactorioLogin = ({setIsFactorioAuthenticated}) => {
                     <Input register={register('username',{required: true})}/>
                 </div>
                 <div className="w-1/2 ml-2">
-                    <Label text={t("login.password_or_token")} htmlFor="password"/>
+                    <Label text={t("mods.add_mod.version")} htmlFor="password"/>
                     <Input type="password" register={register('token',{required: true})}/>
                 </div>
             </div>

@@ -78,22 +78,20 @@
         "create_save": "Создать сохранение",
         "upload_save": "Загрузить сохранение",
         "title": "Сохранения",
-        "last_modified": "Дата изменения",
-        "size": "Размер",
+        "last_modified": "Последние изменение",
+        "size": "Вес",
         "actions": "Действия",
         "create_new_save_only_when_server_not_running": "Создать новый сохранённый файл возможно только если сервер Factorio не запущен.",
         "save_form": {
-            "file_name": "Имя файла сохранения",
+            "file_name": "Имя файла",
             "save_file_error": "Имя файла обязательное поле",
-            "create_save": "Создать сохранение",
-            "save_file_error_message": "Имя файла сохранения обязательно"
+            "create_save": "Создать сохранение"
         },
         "upload_form": {
             "select_file": "Выберите сохранение ...",
             "file_name": "Файл сохранения",
             "save_file_error": "Файл сохранения обязателен",
-            "upload": "Загрузить",
-            "save_file_error_message": "Файл сохранения обязателен"
+            "upload": "Загрузить"
         }
     },
     "controls": {
@@ -109,11 +107,7 @@
         "save": "Сохранить",
         "save&stop": "Сохранить и остановить сервер",
         "kill_server": "Убить сервер",
-        "start_server": "Запустить сервер",
-        "unknown": "Неизвестно",
-        "autostart": "Автостарт",
-        "install_factorio": "Установить Factorio",
-        "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio»."
+        "start_server": "Запустить сервер"
     },
     "mods": {
         "change_mods_while_running_error_message": "Изменение модов отключено, пока сервер работает!",
@@ -129,7 +123,7 @@
         "mods_loaded_from_save": "Моды загружены из файла сохранения @@@.",
         "load_mods_from_save": "Загрузить моды из сохранения",
         "load_confirm_dialog": "Загрузка модов из сохранения @@@ удалит все текущие установленные моды.",
-        "add_modpack_with_current_mods": "Добавить модпак с текущими модами",
+        "add_modpack_with_current_mods": "Добавить пак модов с текущими установленными модами",
         "add_mod": {
             "loading_mod_list": "Загрузка списка модов из",
             "version": "Версия",
@@ -145,7 +139,7 @@
             "load_modpack": "Загрузить пак модов",
             "load_confirm_dialog": "Загрузка пака модов @@@ удалит все установленные моды."
         },
-        "sync_from_save": "Синхронизировать моды из сохранения",
+        "sync_from_save": "Синхронизировать моды из сейва",
         "sync_started": "Синхронизация запущена...",
         "sync_downloading": "Скачивание",
         "sync_done": "Синхронизация завершена",
@@ -164,8 +158,6 @@
         "username_error_message": "Требуется имя пользователя",
         "password_error_message": "Требуется пароль",
         "sing_in": "Войти",
-        "password_or_token": "Пароль или токен",
-        "factorio_credentials_validation_error": "Factorio принял запрос входа, но сохранённые учётные данные не удалось проверить.",
         "factorio_login_error_message": "Указанные имя пользователя, email или пароль не соответствуют ни одному аккаунту."
     },
     "console": {
@@ -180,7 +172,7 @@
         "fsm": "Менеджер серверов Factorio",
         "fsm_content": "Factorio Server Manager (FSM) — проект с открытым исходным кодом и не связан с игрой Factorio или компанией Wube Software.",
         "bugs_help": "Сообщения об ошибках и помощь",
-        "bugs_help_content": "Пожалуйста, используйте <0>репозиторий GitHub</0> для сообщения об ошибках или получения помощи.",
+        "bugs_help_content": "Пожалуйста, используйте <0>репозиторий GitHub</0> для сообщения об ошибках или запроса помощи.",
         "helpful_resources": "Полезные ресурсы",
         "factorio_link_text": "Официальная вики Factorio о многопользовательской игре"
     },
@@ -195,7 +187,7 @@
             "new_password": "Новый пароль",
             "new_password_error": "Требуется новый пароль",
             "new_password_confirmation": "Подтверждение нового пароля",
-            "new_password_confirmation_error": "Подтверждение нового пароля обязательно"
+            "new_password_confirmation_error": "Требуется подтверждение нового пароля"
         },
         "create_user": {
             "title": "Создать пользователя",
@@ -204,7 +196,7 @@
             "email_error": "Требуется email",
             "password_error": "Требуется пароль",
             "password_confirmation": "Подтверждение пароля",
-            "password_confirmation_error": "Подтверждение пароля обязательно и должно совпадать"
+            "password_confirmation_error": "Требуется подтверждение пароля, и оно должно совпадать с паролем"
         }
     },
     "game_settings": {
@@ -215,8 +207,5 @@
     "lang_upload": "Загрузить язык",
     "lang_uploading": "Загрузка...",
     "lang_upload_ok": "Язык загружен!",
-    "lang_upload_err": "Ошибка загрузки",
-    "lang_download_current": "Скачать этот язык",
-    "lang_apply_question": "Применить загруженный язык?",
-    "lang_overwrite_question": "Файл уже существует. Заменить?"
+    "lang_upload_err": "Ошибка загрузки"
 }
