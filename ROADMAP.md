@@ -17,7 +17,7 @@
 - [x] Upload custom locale from UI (with overwrite confirmation)
 - [x] Active language highlighted in language dialog
 - [x] Portal link icon next to each mod in the list (thanks @TheCoolestPaul)
-- [x] Factorio installation via web UI (download & install)
+- [x] Factorio installation via web UI (download & install, auto server-settings.json)
 - [x] Factorio version dropdown (stable/experimental) in Server Status
 - [x] Warning when Factorio is not installed
 - [x] FSM starts without Factorio binary (graceful degradation)
