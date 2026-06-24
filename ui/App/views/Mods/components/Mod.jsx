@@ -68,7 +68,7 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
     }, [mod]);
 
     return (
-        <tr className="py-1">
+        <tr className="py-1 hover:glow-orange hover:bg-orange hover:text-black">
             <td className="pr-4">
                 {mod.title}
                 {mod.name && (
