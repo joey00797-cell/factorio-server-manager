@@ -72,7 +72,7 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
             <td className="pr-4">
                 {mod.title}
                 {mod.name && (
-                    
+                    <a
                         href={portalUrl}
                         target="_blank"
                         rel="noopener noreferrer"

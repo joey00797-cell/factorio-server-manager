@@ -30,5 +30,15 @@ if [ ! -f /opt/fsm-data/conf.json ]; then
 fi
 
 
+# Копируем server-settings если нет, пустой или содержит null
+SETTINGS=/opt/factorio/config/server-settings.json
+if [ ! -f "$SETTINGS" ] || [ ! -s "$SETTINGS" ] || [ "$(cat $SETTINGS | tr -d '[:space:]')" = "null" ]; then
+    if [ -f /opt/factorio/data/server-settings.example.json ]; then
+        mkdir -p /opt/factorio/config
+        cp /opt/factorio/data/server-settings.example.json "$SETTINGS"
+        echo "server-settings.json создан из примера"
+    fi
+fi
+
 cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80
 

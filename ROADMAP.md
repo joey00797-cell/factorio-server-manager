@@ -10,13 +10,13 @@
 - [x] DLC mods auto-detected and grouped in UI with single toggle
 - [x] DLC mods visible in installed mods list with enable/disable
 - [x] Server start blocked while mod sync is in progress
-- [x] i18n support (EN/RU/ZH)
+- [x] i18n support (EN/RU/ZH) (inspired by @BAYUNZIYUE)
 - [x] Token-based authentication on factorio.com
-- [x] Dynamic locale loading via HTTP backend
+- [x] Dynamic locale loading via HTTP backend (inspired by @BAYUNZIYUE)
 - [x] Download locale template from UI
 - [x] Upload custom locale from UI (with overwrite confirmation)
 - [x] Active language highlighted in language dialog
-- [x] Portal link icon next to each mod in the list
+- [x] Portal link icon next to each mod in the list (thanks @TheCoolestPaul)
 - [x] Factorio installation via web UI (download & install)
 - [x] Factorio version dropdown (stable/experimental) in Server Status
 - [x] Warning when Factorio is not installed
@@ -25,16 +25,20 @@
 - [x] Full UI translation coverage (all views and components)
 
 ## 🚧 In Progress
+### Server
 - [ ] Autostart toggle (UI done, backend wiring in progress)
-- [ ] Save selected save file between page reloads
-- [ ] Auto-locale generation via Google Translate API on first login
-
-## 📋 Planned
+- [ ] Remember selected save file between page reloads
+- [ ] Factorio installation via web UI improvements (progress bar, version history)
+- [ ] Multi-version Factorio support via symlinks
+- [ ] Add server page (first step toward multi-server: local or remote via RCON)
+- [ ] Import server-settings.json from UI
+- [ ] Server name field
 
 ### Locales
-- [ ] Google Translate API integration for auto-locale generation
-- [ ] Prompt user to generate locale if browser language has no match
-- [ ] Force-generate locale button with language selector in UI
+- [ ] Auto-locale generation via Google Translate API on first login
+- [ ] Translation coverage improvements (new features may introduce untranslated strings)
+
+## 📋 Planned
 
 ### Mods
 - [ ] Auto-resolve mod dependencies when creating a new save
@@ -42,14 +46,6 @@
 - [ ] Row highlight on hover in mod list
 
 ### Server
-- [ ] Autostart — save to config and wire to FSM --autostart flag
-- [ ] Remember selected save file (localStorage)
-- [ ] Server name field
-- [ ] Multi-version Factorio support via symlinks
-  - [ ] Install multiple versions side by side
-  - [ ] Switch active version via symlink
-  - [ ] Delete old versions from UI
-- [ ] Import server-settings.json from UI
 - [ ] Multi-server support (future)
 - [ ] Dual logs — Factorio server logs + FSM manager logs
 
