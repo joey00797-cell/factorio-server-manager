@@ -2,6 +2,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     faArrowCircleUp,
     faCheck,
+    faExternalLinkAlt,
     faSpinner,
     faTimes,
     faToggleOff,
@@ -16,6 +17,7 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
 
     const [newVersion, setNewVersion] = useState(null)
     const [icon, setIcon] = useState(faArrowCircleUp)
+    const portalUrl = `https://mods.factorio.com/mod/${encodeURIComponent(mod.name)}`
 
     useEffect(() => {
         if (!disabled) {
@@ -65,7 +67,21 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
 
     return (
         <tr className="py-1">
-            <td className="pr-4">{mod.title}</td>
+            <td className="pr-4">
+                {mod.title}
+                {mod.name && (
+                    <a
+                        href={portalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${mod.title} on the Factorio mod portal`}
+                        aria-label={`Open ${mod.title} on the Factorio mod portal`}
+                        className="ml-2 text-blue hover:text-blue-light"
+                    >
+                        <FontAwesomeIcon icon={faExternalLinkAlt} size="xs"/>
+                    </a>
+                )}
+            </td>
             <td className="pr-4">
                 {
                     disabled
