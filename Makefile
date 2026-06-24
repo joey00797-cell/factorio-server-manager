@@ -23,6 +23,8 @@ build/factorio-server-manager-%.zip: clean app/bundle factorio-server-manager-%
 app/bundle:
 	@echo "Building Frontend"
 	@npm install && npm run build
+	@mkdir -p app/locales
+	@cp ui/App/locales/*.json app/locales/
 
 factorio-server-manager-linux:
 	@echo "Building Backend - Linux"

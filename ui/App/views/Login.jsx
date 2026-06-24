@@ -8,8 +8,10 @@ import Input from "../components/Input";
 import Label from "../components/Label";
 import {Flash} from "../components/Flash";
 import Error from "../components/Error";
+import { useTranslation } from "react-i18next";
 
 const Login = ({handleLogin}) => {
+    const { t } = useTranslation();
     const {register, handleSubmit, formState: { errors }} = useForm();
     const navigate = useNavigate();
     const location = useLocation();
@@ -23,7 +25,7 @@ const Login = ({handleLogin}) => {
             }
         } catch (e) {
             console.log(e);
-            window.flash("Login failed. Username or Password wrong.", "red");
+            window.flash(t("login.login_failed_message"), "red");
             throw e;
         }
     };
@@ -42,22 +44,22 @@ const Login = ({handleLogin}) => {
     return (
         <div className="h-screen overflow-hidden flex items-center justify-center bg-black">
             <Panel
-                title="Login"
+                title={t("login.title")}
                 content={
                     <form onSubmit={handleSubmit(onSubmit)}>
                         <div className="mb-4">
-                            <Label text="Username" htmlFor="username"/>
-                            <Input register={register('username', {required: true})} placeholder="Username"/>
-                            <Error error={errors.username} message="Username is required"/>
+                            <Label text={t("username")} htmlFor="username"/>
+                            <Input register={register('username', {required: true})} placeholder={t("username")}/>
+                            <Error error={errors.username} message={t("login.username_error_message")}/>
                         </div>
                         <div className="mb-6">
-                            <Label text="Password" htmlFor="password"/>
+                            <Label text={t("password")} htmlFor="password"/>
                             <Input
                                 register={register('password',{required: true})}
                                 type="password"
                                 placeholder="******************"
                             />
-                            <Error error={errors.password} message="Password is required"/>
+                            <Error error={errors.password} message={t("login.password_error_message")}/>
                         </div>
                         <div className="text-center">
                             <Button type="success" className="w-full" isSubmit={true}>Sign In</Button>

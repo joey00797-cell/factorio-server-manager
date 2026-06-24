@@ -1,8 +1,10 @@
 import Panel from "../components/Panel";
 import React, {useEffect, useState} from "react";
 import settingsResource from "../../api/resources/settings";
+import { useTranslation } from "react-i18next";
 
 const GameSettings = () => {
+    const { t } = useTranslation();
 
     const [settingsCategories, setSettingsCategories] = useState();
 
@@ -18,7 +20,7 @@ const GameSettings = () => {
     return (
         <Panel
             className="mb-4"
-            title="Game Settings"
+            title={t("game_settings.title")}
             content={
                 <>
                     {settingsCategories && Object.keys(settingsCategories).map(key => {

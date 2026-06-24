@@ -1,6 +1,7 @@
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     faArrowCircleUp,
+    faExternalLinkAlt,
     faCheck,
     faSpinner,
     faTimes,
@@ -10,12 +11,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import modsResource from "../../../../api/resources/mods";
 import React, {useEffect, useState} from "react";
+import { useTranslation } from "react-i18next";
 import {coerce, gt, satisfies} from "semver";
 
 const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatableMod, disabled = false}) => {
+    const { t } = useTranslation();
 
     const [newVersion, setNewVersion] = useState(null)
     const [icon, setIcon] = useState(faArrowCircleUp)
+    const portalUrl = `https://mods.factorio.com/mod/${encodeURIComponent(mod.name)}`
 
     useEffect(() => {
         if (!disabled) {
@@ -65,7 +69,19 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
 
     return (
         <tr className="py-1">
-            <td className="pr-4">{mod.title}</td>
+            <td className="pr-4">
+                {mod.title}
+                {mod.name && (
+                    
+                        href={portalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-blue hover:text-blue-light"
+                    >
+                        <FontAwesomeIcon icon={faExternalLinkAlt} size="xs"/>
+                    </a>
+                )}
+            </td>
             <td className="pr-4">
                 {
                     disabled

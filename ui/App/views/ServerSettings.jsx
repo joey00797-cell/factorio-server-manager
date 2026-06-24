@@ -7,8 +7,10 @@ import Checkbox from "../components/Checkbox";
 import InputPassword from "../components/InputPassword";
 import Button from "../components/Button";
 import {useForm} from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 const ServerSettings = () => {
+    const { t } = useTranslation();
 
     const [settings, setSettings] = useState();
     const [numberInputs, setNumberInputs] = useState([]);
@@ -36,7 +38,7 @@ const ServerSettings = () => {
        settingsResource.server.update(data)
            .then(() => {
                fetchSettings()
-                   .then(() => window.flash("Settings saved.", "green"))
+                   .then(() => window.flash(t("saved"), "green"))
            });
     }
 
@@ -124,7 +126,7 @@ const ServerSettings = () => {
     return (
         <form className="mb-4" onSubmit={handleSubmit(saveServerSettings)}>
             <Panel
-                title="Server Settings"
+                title={t("server_settings.title")}
                 content={
                     <>
                         {settings && Object.keys(settings).map(key => {
@@ -150,7 +152,7 @@ const ServerSettings = () => {
                     </>
                 }
                 actions={
-                    <Button isSubmit={true} type="success">Save</Button>
+                    <Button isSubmit={true} type="success">{t("save")}</Button>
                 }
             />
         </form>

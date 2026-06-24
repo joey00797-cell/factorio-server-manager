@@ -29,7 +29,6 @@ if [ ! -f /opt/fsm-data/conf.json ]; then
     init_config
 fi
 
-install_game
 
 cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80
 

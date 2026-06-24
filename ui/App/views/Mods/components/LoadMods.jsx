@@ -21,15 +21,15 @@ const STATUS_ICON = {
     not_found:     <FontAwesomeIcon icon={faTimes} className="text-red"/>,
 };
 
-const STATUS_TEXT = {
-    downloading:   "Downloading...",
-    downloaded:    "Downloaded",
-    installed:     "Installed",
-    wrong_version: "Wrong version",
-    missing:       "Missing",
-    builtin:       "Built-in / DLC",
-    not_found:     "Not found on portal",
-};
+const STATUS_TEXT = (t) => ({
+    downloading:   t("mods.status_downloading"),
+    downloaded:    t("mods.status_downloaded"),
+    installed:     t("mods.status_already_installed"),
+    wrong_version: t("mods.status_not_found"),
+    missing:       t("mods.status_not_found"),
+    builtin:       t("mods.status_builtin"),
+    not_found:     t("mods.status_not_found"),
+});
 
 const LoadMods = ({refreshMods}) => {
     const {t} = useTranslation();
@@ -157,7 +157,7 @@ const LoadMods = ({refreshMods}) => {
     return (
         <div>
             {/* Выбор сейва */}
-            <Label text="Save" htmlFor="save"/>
+            <Label text={t("controls.save")} htmlFor="save"/>
             <select
                 className="shadow appearance-none border w-full py-2 px-3 text-black mb-4"
                 disabled={isDisabled}
@@ -175,7 +175,7 @@ const LoadMods = ({refreshMods}) => {
                 onClick={onReadSave}
                 className="mr-2"
             >
-                Read Mods from Save
+                {t("mods.load_mods_from_save")}
             </Button>
 
             {/* Ошибка */}
@@ -197,8 +197,8 @@ const LoadMods = ({refreshMods}) => {
                 <div className="mt-4">
                     {/* Кнопки выбора */}
                     <div className="flex mb-2 gap-2">
-                        <Button size="sm" onClick={selectAll}>Select missing</Button>
-                        <Button size="sm" onClick={clearAll}>Clear selection</Button>
+                        <Button size="sm" onClick={selectAll}>{t("mods.sync_from_save")}</Button>
+                        <Button size="sm" onClick={clearAll}>{t("cancel")}</Button>
                         <Button
                             size="sm"
                             isDisabled={checkedCount === 0 || isSyncing}
@@ -213,7 +213,7 @@ const LoadMods = ({refreshMods}) => {
                     {currentMod && (
                         <div className="mb-2 text-sm text-orange">
                             <FontAwesomeIcon icon={faSpinner} spin={true} className="mr-2"/>
-                            Downloading: {currentMod}
+                            {t("mods.sync_downloading")}: {currentMod}
                         </div>
                     )}
 
@@ -221,10 +221,10 @@ const LoadMods = ({refreshMods}) => {
                         <thead>
                             <tr className="border-b font-bold">
                                 <td className="py-1 pr-2 w-6"></td>
-                                <td className="py-1 pr-4">Mod</td>
-                                <td className="py-1 pr-4">Required</td>
-                                <td className="py-1 pr-4">Installed</td>
-                                <td className="py-1">Status</td>
+                                <td className="py-1 pr-4">{t("mods.title")}</td>
+                                <td className="py-1 pr-4">{t("mods.mod_list.mod_version")}</td>
+                                <td className="py-1 pr-4">{t("mods.status_already_installed")}</td>
+                                <td className="py-1">{t("controls.status")}</td>
                             </tr>
                         </thead>
                         <tbody>
@@ -247,7 +247,7 @@ const LoadMods = ({refreshMods}) => {
                                         <td className="py-1 pr-4">{dlcMods[0]?.version_installed || '—'}</td>
                                         <td className="py-1">
                                             <span className="mr-2">{STATUS_ICON[allInstalled ? 'installed' : 'builtin']}</span>
-                                            {allInstalled ? 'Installed' : 'Built-in / DLC'}
+                                            {allInstalled ? t('mods.status_already_installed') : t('mods.status_builtin')}
                                         </td>
                                     </tr>
                                 );
@@ -287,7 +287,7 @@ const LoadMods = ({refreshMods}) => {
                                     <td className="py-1 pr-4">{mod.version_installed || '—'}</td>
                                     <td className="py-1">
                                         <span className="mr-2">{STATUS_ICON[mod.status]}</span>
-                                        {STATUS_TEXT[mod.status] || mod.status}
+                                        {STATUS_TEXT(t)[mod.status] || mod.status}
                                     </td>
                                 </tr>
                             ))}

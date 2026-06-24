@@ -849,7 +849,7 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
     defer dlResp.Body.Close()
     io.Copy(out, dlResp.Body)
 
-    cmd := exec.Command("tar", "-xf", "/tmp/factorio_install.tar.xz", "-C", filepath.Dir(config.FactorioDir))
+    cmd := exec.Command("tar", "-xf", "/tmp/factorio_install.tar.xz", "-C", filepath.Dir(config.FactorioDir), "--strip-components=1")
     if err := cmd.Run(); err != nil {
         w.WriteHeader(http.StatusInternalServerError)
         resp = fmt.Sprintf("Error extracting Factorio: %s", err)
@@ -857,6 +857,25 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
     }
 
     os.Remove("/tmp/factorio_install.tar.xz")
+
+    // Копируем server-settings.example.json если конфига ещё нет
+    config = bootstrap.GetConfig()
+    settingsExample := filepath.Join(config.FactorioDir, "data", "server-settings.example.json")
+    settingsDst := config.SettingsFile
+    if _, err := os.Stat(settingsDst); os.IsNotExist(err) {
+        if src, err := os.ReadFile(settingsExample); err == nil {
+            os.MkdirAll(filepath.Dir(settingsDst), 0755)
+            os.WriteFile(settingsDst, src, 0644)
+            log.Printf("server-settings.json создан из примера")
+        }
+    }
+
+    // Обновляем версию в существующем экземпляре сервера
+    server := factorio.GetFactorioServer()
+    if err := server.RefreshVersion(); err != nil {
+        log.Printf("Не удалось обновить версию: %v", err)
+    }
+    
     resp = fmt.Sprintf("Factorio %s installed successfully", data.Version)
     log.Println(resp)
 }

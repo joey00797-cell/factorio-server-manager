@@ -143,6 +143,11 @@ func NewFactorioServer() (err error) {
 		log.Printf("error reading %s: %v", settingsPath, err)
 		return
 	}
+	// Защита от null в JSON файле
+	if server.Settings == nil {
+		log.Printf("server-settings.json содержит null, инициализируем пустыми настройками")
+		server.Settings = make(map[string]interface{})
+	}
 
 	log.Printf("Loaded Factorio settings from %s\n", settingsPath)
 
@@ -425,4 +430,26 @@ func serverWebsocketControl(controls websocket.WsControls) {
 			log.Printf("Command send to Factorio: %s, with rcon request id: %v", command, reqId)
 		}
 	}
+}
+
+// RefreshVersion перечитывает версию Factorio бинарника
+func (s *Server) RefreshVersion() error {
+    config := bootstrap.GetConfig()
+    out, err := exec.Command(config.FactorioBinary, "--version").Output()
+    if err != nil {
+        return err
+    }
+    // Парсим версию из вывода
+    lines := strings.Split(string(out), "\n")
+    for _, line := range lines {
+        if strings.HasPrefix(line, "Version:") {
+            parts := strings.Fields(line)
+            if len(parts) >= 2 {
+                if err := s.Version.UnmarshalText([]byte(parts[1])); err == nil {
+                    log.Printf("Factorio version updated: %s", s.Version.String())
+                }
+            }
+        }
+    }
+    return nil
 }

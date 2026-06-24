@@ -5,9 +5,10 @@ import Label from "../../../components/Label";
 import Input from "../../../components/Input";
 import {useForm} from "react-hook-form";
 import modsResource from "../../../../api/resources/mods";
+import { useTranslation } from "react-i18next";
 
 const CreateModPack = ({onSuccess}) => {
-
+    const { t } = useTranslation();
     const [isCreating, setIsCreating] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -26,11 +27,11 @@ const CreateModPack = ({onSuccess}) => {
     }
 
     return <>
-        <Button size="sm" onClick={() => setIsOpen(true)}>Add ModPack with current installed Mods</Button>
-        <Modal title="Create Mod Pack" isOpen={isOpen} content={
+        <Button size="sm" onClick={() => setIsOpen(true)}>{t("mods.add_modpack_with_current_mods")}</Button>
+        <Modal title={t("mods.mod_packs")} isOpen={isOpen} content={
             <form onSubmit={handleSubmit(createModPack)}>
                 <div className="mb-4">
-                    <Label text="Name" htmlFor="name"/>
+                    <Label text={t("name")} htmlFor="name"/>
                     <Input register={register('name',{required: true})}/>
                 </div>
                 <Button size="sm" isLoading={isCreating} isSubmit={true}>Create</Button>
