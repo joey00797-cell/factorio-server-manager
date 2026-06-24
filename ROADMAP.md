@@ -37,6 +37,7 @@
 ### Locales
 - [ ] Auto-locale generation via Google Translate API on first login
 - [ ] Translation coverage improvements (new features may introduce untranslated strings)
+- [ ]  - One of them is the entry point instead of the locale. I know) just select the locale in the menu
 
 ## 📋 Planned
 

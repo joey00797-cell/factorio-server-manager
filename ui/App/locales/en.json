@@ -163,6 +163,8 @@
         "username_error_message": "Username is required",
         "password_error_message": "Password is required",
         "sign_in": "Sign In",
+        "password_or_token": "Password or Token",
+        "factorio_credentials_validation_error": "Factorio accepted the login request, but the saved credentials could not be validated.",
         "factorio_login_error_message": "Given username or email and password do not match any account."
     },
     "console": {

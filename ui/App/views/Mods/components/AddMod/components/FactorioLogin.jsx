@@ -11,7 +11,7 @@ const FactorioLogin = ({setIsFactorioAuthenticated}) => {
     const {register, handleSubmit} = useForm();
     const [isLoading, setIsLoading] = useState(false);
 
-    const login = ({username, token}) => {
+    const login = async ({username, token}) => {
         setIsLoading(true);
         modsResource.portal.login(username, token)
             .then(res => {

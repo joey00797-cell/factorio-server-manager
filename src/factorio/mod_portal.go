@@ -3,9 +3,11 @@ package factorio
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -103,12 +105,22 @@ func ModPortalModDetails(modId string) (ModPortalStruct, error, int) {
 	return mod, nil, resp.StatusCode
 }
 
-//Log the user into factorio, so mods can be downloaded
+// Log the user into factorio, so mods can be downloaded
 func FactorioLogin(username string, password string) (error, int) {
-	var err error
+	username = strings.TrimSpace(username)
+	password = strings.TrimSpace(password)
+
+	if username == "" || password == "" {
+		return errors.New("username and password are required"), http.StatusBadRequest
+	}
 
 	resp, err := http.PostForm("https://auth.factorio.com/api-login",
-		url.Values{"require_game_ownership": {"true"}, "username": {username}, "password": {password}})
+		url.Values{
+			"api_version":            {"6"},
+			"require_game_ownership": {"true"},
+			"username":               {username},
+			"password":               {password},
+		})
 
 	if err != nil {
 		return err, http.StatusInternalServerError
@@ -121,21 +133,41 @@ func FactorioLogin(username string, password string) (error, int) {
 		return err, http.StatusInternalServerError
 	}
 
-	bodyString := string(bodyBytes)
-
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(bodyString), resp.StatusCode
+		return errors.New(string(bodyBytes)), resp.StatusCode
 	}
 
-	var successResponse []string
-	err = json.Unmarshal(bodyBytes, &successResponse)
-	if err != nil {
+	var authResponse struct {
+		Token    string `json:"token"`
+		Username string `json:"username"`
+		Error    string `json:"error"`
+		Message  string `json:"message"`
+	}
+	if err = json.Unmarshal(bodyBytes, &authResponse); err != nil {
 		return err, http.StatusInternalServerError
 	}
 
+	if authResponse.Error != "" {
+		if authResponse.Message != "" {
+			return errors.New(authResponse.Message), http.StatusUnauthorized
+		}
+		return errors.New(authResponse.Error), http.StatusUnauthorized
+	}
+
+	if authResponse.Token == "" || authResponse.Username == "" {
+		return errors.New("Factorio login did not return a token"), http.StatusBadGateway
+	}
+
 	credentials := Credentials{
-		Username: username,
-		Userkey:  successResponse[0],
+		Username: authResponse.Username,
+		Userkey:  authResponse.Token,
+	}
+
+	if err := credentials.Validate(); err != nil {
+		if err == ErrInvalidFactorioCredentials {
+			return errors.New("Factorio accepted the login, but the mod portal rejected the returned token"), http.StatusForbidden
+		}
+		return err, http.StatusBadGateway
 	}
 
 	err = credentials.Save()
@@ -146,8 +178,35 @@ func FactorioLogin(username string, password string) (error, int) {
 	return nil, http.StatusOK
 }
 
-// FactorioLoginWithToken saves credentials directly using a token from factorio.com/profile
+func FactorioLoginWithPasswordOrToken(username string, passwordOrToken string) (error, int) {
+	username = strings.TrimSpace(username)
+	passwordOrToken = strings.TrimSpace(passwordOrToken)
+
+	if username == "" || passwordOrToken == "" {
+		return errors.New("username and password/token are required"), http.StatusBadRequest
+	}
+
+	tokenErr, tokenStatus := FactorioLoginWithToken(username, passwordOrToken)
+	if tokenErr == nil {
+		return nil, tokenStatus
+	}
+	if tokenStatus != http.StatusForbidden {
+		return tokenErr, tokenStatus
+	}
+
+	passwordErr, passwordStatus := FactorioLogin(username, passwordOrToken)
+	if passwordErr == nil {
+		return nil, passwordStatus
+	}
+
+	return fmt.Errorf("Factorio rejected this as both a token and a password: %s", passwordErr), passwordStatus
+}
+
+// FactorioLoginWithToken validates and saves credentials using a token from factorio.com/profile.
 func FactorioLoginWithToken(username string, token string) (error, int) {
+	username = strings.TrimSpace(username)
+	token = strings.TrimSpace(token)
+
 	if username == "" || token == "" {
 		return errors.New("username and token are required"), http.StatusBadRequest
 	}
@@ -157,10 +216,39 @@ func FactorioLoginWithToken(username string, token string) (error, int) {
 		Userkey:  token,
 	}
 
+	if err := credentials.Validate(); err != nil {
+		if err == ErrInvalidFactorioCredentials {
+			return fmt.Errorf("Factorio rejected this username/token pair"), http.StatusForbidden
+		}
+		return err, http.StatusBadGateway
+	}
+
 	err := credentials.Save()
 	if err != nil {
 		return err, http.StatusInternalServerError
 	}
 
 	return nil, http.StatusOK
+}
+
+func FactorioLoginStatus() (bool, error, int) {
+	var credentials Credentials
+	status, err := credentials.Load()
+	if err != nil {
+		return false, err, http.StatusInternalServerError
+	}
+	if !status {
+		return false, nil, http.StatusOK
+	}
+
+	err = credentials.Validate()
+	if err == nil {
+		return true, nil, http.StatusOK
+	}
+	if err == ErrInvalidFactorioCredentials {
+		_ = credentials.Del()
+		return false, nil, http.StatusOK
+	}
+
+	return false, err, http.StatusBadGateway
 }
