@@ -3,12 +3,18 @@ package factorio
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 )
+
+var ErrInvalidFactorioCredentials = errors.New("invalid Factorio username or token")
 
 type Credentials struct {
 	Username string `json:"username"`
@@ -18,6 +24,10 @@ type Credentials struct {
 func (credentials *Credentials) Save() error {
 	var err error
 	config := bootstrap.GetConfig()
+
+	credentials.Username = strings.TrimSpace(credentials.Username)
+	credentials.Userkey = strings.TrimSpace(credentials.Userkey)
+
 	credentialsJson, err := json.Marshal(credentials)
 	if err != nil {
 		log.Printf("error mashalling the credentials: %s", err)
@@ -54,6 +64,9 @@ func (credentials *Credentials) Load() (bool, error) {
 		return false, err
 	}
 
+	credentials.Username = strings.TrimSpace(credentials.Username)
+	credentials.Userkey = strings.TrimSpace(credentials.Userkey)
+
 	if credentials.Userkey != "" && credentials.Username != "" {
 		return true, nil
 	} else {
@@ -66,10 +79,61 @@ func (credentials *Credentials) Del() error {
 	var err error
 	config := bootstrap.GetConfig()
 	err = os.Remove(config.FactorioCredentialsFile)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
 		log.Printf("error delete the credentialfile: %s", err)
 		return err
 	}
 
 	return nil
+}
+
+func (credentials *Credentials) DownloadURL(downloadPath string) string {
+	downloadURL, err := url.Parse("https://mods.factorio.com" + downloadPath)
+	if err != nil {
+		return "https://mods.factorio.com" + downloadPath
+	}
+
+	query := downloadURL.Query()
+	query.Set("username", strings.TrimSpace(credentials.Username))
+	query.Set("token", strings.TrimSpace(credentials.Userkey))
+	downloadURL.RawQuery = query.Encode()
+
+	return downloadURL.String()
+}
+
+func (credentials *Credentials) Validate() error {
+	credentials.Username = strings.TrimSpace(credentials.Username)
+	credentials.Userkey = strings.TrimSpace(credentials.Userkey)
+
+	if credentials.Username == "" || credentials.Userkey == "" {
+		return ErrInvalidFactorioCredentials
+	}
+
+	validateURL, err := url.Parse("https://mods.factorio.com/api/bookmarks")
+	if err != nil {
+		return err
+	}
+
+	query := validateURL.Query()
+	query.Set("username", credentials.Username)
+	query.Set("token", credentials.Userkey)
+	validateURL.RawQuery = query.Encode()
+
+	resp, err := http.Get(validateURL.String())
+	if err != nil {
+		return fmt.Errorf("validating Factorio credentials: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		return ErrInvalidFactorioCredentials
+	}
+
+	return fmt.Errorf("validating Factorio credentials returned status %d", resp.StatusCode)
 }

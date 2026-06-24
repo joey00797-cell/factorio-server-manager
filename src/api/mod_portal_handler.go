@@ -112,7 +112,7 @@ func ModPortalLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err, statusCode := factorio.FactorioLoginWithToken(data.Username, data.Token)
+	err, statusCode := factorio.FactorioLoginWithPasswordOrToken(data.Username, data.Token)
 	w.WriteHeader(statusCode)
 	if err != nil {
 		resp = fmt.Sprintf("Error trying to login into Factorio: %s", err)
@@ -129,13 +129,13 @@ func ModPortalLoginStatusHandler(w http.ResponseWriter, r *http.Request) {
 		WriteResponse(w, resp)
 	}()
 
-	var credentials factorio.Credentials
-	resp, err = credentials.Load()
+	var statusCode int
+	resp, err, statusCode = factorio.FactorioLoginStatus()
+	w.WriteHeader(statusCode)
 
 	if err != nil {
 		resp = fmt.Sprintf("Error getting the factorio credentials: %s", err)
 		log.Println(resp)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
