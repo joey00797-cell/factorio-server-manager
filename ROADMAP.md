@@ -12,6 +12,7 @@
 - [x] Server start blocked while mod sync is in progress
 - [x] i18n support (EN/RU/ZH) (inspired by @BAYUNZIYUE)
 - [x] Token-based authentication on factorio.com
+- [x] Validate Factorio mod portal credentials on login (thanks @TheCoolestPaul)
 - [x] Dynamic locale loading via HTTP backend (inspired by @BAYUNZIYUE)
 - [x] Download locale template from UI
 - [x] Upload custom locale from UI (with overwrite confirmation)
@@ -21,14 +22,13 @@
 - [x] Factorio version dropdown (stable/experimental) in Server Status
 - [x] Warning when Factorio is not installed
 - [x] FSM starts without Factorio binary (graceful degradation)
-- [x] server-settings.json auto-created from example after install
 - [x] Full UI translation coverage (all views and components)
 
 ## 🚧 In Progress
 ### Server
 - [ ] Autostart toggle (UI done, backend wiring in progress)
 - [ ] Remember selected save file between page reloads
-- [ ] Factorio installation via web UI improvements (progress bar, version history)
+- [ ] Factorio installation progress bar
 - [ ] Multi-version Factorio support via symlinks
 - [ ] Add server page (first step toward multi-server: local or remote via RCON)
 - [ ] Import server-settings.json from UI
