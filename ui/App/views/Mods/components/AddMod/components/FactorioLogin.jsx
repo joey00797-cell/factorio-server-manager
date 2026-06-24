@@ -4,9 +4,11 @@ import Input from "../../../../../components/Input";
 import Label from "../../../../../components/Label";
 import Button from "../../../../../components/Button";
 import modsResource from "../../../../../../api/resources/mods";
+import {useTranslation} from "react-i18next";
 
 const FactorioLogin = ({setIsFactorioAuthenticated}) => {
 
+    const {t} = useTranslation();
     const {register, handleSubmit} = useForm();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -20,10 +22,10 @@ const FactorioLogin = ({setIsFactorioAuthenticated}) => {
             setIsFactorioAuthenticated(isAuthenticated);
 
             if (!isAuthenticated) {
-                window.flash("Factorio accepted the login request, but the saved credentials could not be validated.", "red");
+                window.flash(t("login.factorio_credentials_validation_error"), "red");
             }
         } catch (err) {
-            window.flash(err.response?.data || "Factorio rejected this username/password or username/token.", "red");
+            window.flash(err.response?.data || t("login.factorio_login_error_message"), "red");
         } finally {
             setIsLoading(false);
         }
@@ -33,15 +35,15 @@ const FactorioLogin = ({setIsFactorioAuthenticated}) => {
         <form onSubmit={handleSubmit(login)}>
             <div className="flex mb-4">
                 <div className="w-1/2 mr-2">
-                    <Label text="Username" htmlFor="username"/>
+                    <Label text={t("username")} htmlFor="username"/>
                     <Input register={register('username',{required: true})}/>
                 </div>
                 <div className="w-1/2 ml-2">
-                    <Label text="Password or Token" htmlFor="password"/>
+                    <Label text={t("login.password_or_token")} htmlFor="password"/>
                     <Input type="password" register={register('token',{required: true})}/>
                 </div>
             </div>
-            <Button isSubmit={true} isLoading={isLoading}>Login</Button>
+            <Button isSubmit={true} isLoading={isLoading}>{t("login.login")}</Button>
         </form>
     )
 }

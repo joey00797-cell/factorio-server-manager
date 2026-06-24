@@ -158,6 +158,8 @@
         "username_error_message": "Требуется имя пользователя",
         "password_error_message": "Требуется пароль",
         "sing_in": "Войти",
+        "password_or_token": "Пароль или токен",
+        "factorio_credentials_validation_error": "Factorio принял запрос входа, но сохранённые учётные данные не удалось проверить.",
         "factorio_login_error_message": "Указанные имя пользователя, email или пароль не соответствуют ни одному аккаунту."
     },
     "console": {
