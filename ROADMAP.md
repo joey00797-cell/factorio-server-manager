@@ -23,6 +23,7 @@
 - [x] Warning when Factorio is not installed
 - [x] FSM starts without Factorio binary (graceful degradation)
 - [x] Full UI translation coverage (all views and components)
+- [x] Row highlight on hover in mod list (thanks @TheCoolestPaul)
 
 ## 🚧 In Progress
 ### Server
@@ -44,7 +45,6 @@
 ### Mods
 - [ ] Auto-resolve mod dependencies when creating a new save
 - [ ] Real byte-based progress bar for mod downloads
-- [ ] Row highlight on hover in mod list
 
 ### Server
 - [ ] Multi-server support (future)
