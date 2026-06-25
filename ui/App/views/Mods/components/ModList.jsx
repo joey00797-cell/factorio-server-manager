@@ -37,7 +37,7 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
             <tbody>
                 {/* DLC группа */}
                 {factorioVersion !== null && dlcMods.length > 0 && (
-                    <tr className="py-1 bg-blue-50 hover:bg-blue-100">
+                    <tr className="py-1 bg-blue-50 hover:glow-orange hover:bg-orange hover:text-black">
                         <td className="pr-4 italic text-blue-600">
                             Space Age DLC
                             <span className="ml-2 text-xs text-gray-500 not-italic">
