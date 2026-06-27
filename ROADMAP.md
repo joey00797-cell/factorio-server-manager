@@ -37,6 +37,9 @@
 ### Server
 - [x] Autostart toggle (saved to conf.json, UI toggle in Controls)
 - [ ] After Factorio install: compare example config with current, prompt to sync new fields
+- [x] Add: Game Settings warning when config.ini not available
+- [x] Fix: controls i18n — autostart, install_factorio, factorio_not_installed keys
+- [x] Fix: Dockerfile warnings (FromAsCasing, LegacyKeyValueFormat)
 - [ ] Remember selected save file between page reloads
 - [ ] Factorio installation progress bar
 - [ ] Multi-version Factorio support via symlinks
