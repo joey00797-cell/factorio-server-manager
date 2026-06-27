@@ -15,16 +15,17 @@ const ServerSettings = () => {
     const [settings, setSettings] = useState();
     const [numberInputs, setNumberInputs] = useState([]);
 
-    const {register, handleSubmit, formState: {errors}, control} = useForm();
+    const {register, handleSubmit, formState: {errors, isDirty}, control, reset} = useForm();
 
     const fetchSettings = async () => {
         const res = await settingsResource.server.list();
         setSettings(res);
+        reset(res);
     };
 
     const saveServerSettings = data => {
-        data.tags = data.tags.split(',');
-        data.admins = data.admins.split(',');
+        data.tags = data.tags ? (Array.isArray(data.tags) ? data.tags : data.tags.split(',')) : [];
+        data.admins = data.admins ? (Array.isArray(data.admins) ? data.admins : data.admins.split(',')) : [];
 
         numberInputs.forEach(numberInput => {
             data[numberInput] = parseInt(data[numberInput]);
@@ -69,7 +70,7 @@ const ServerSettings = () => {
                 return (
                     <>
                         <Label htmlFor={name} text={label}/>
-                        <Input type="number" register={register} valueAsNumber="double" defaultValue={value} />
+                        <Input type="number" name={name} register={register} valueAsNumber="double" defaultValue={value} />
                     </>
                 )
             case "string":
@@ -131,11 +132,7 @@ const ServerSettings = () => {
                     <>
                         {settings && Object.keys(settings).map(key => {
                             if (key.startsWith("_comment_")) {
-                                return (
-                                    <div key={key}>
-                                        {formTypeField(key, value)}
-                                    </div>
-                                );
+                                return null;
                             }
 
                             const value = settings[key]
@@ -152,7 +149,7 @@ const ServerSettings = () => {
                     </>
                 }
                 actions={
-                    <Button isSubmit={true} type="success">{t("save")}</Button>
+                    <Button isSubmit={true} type="success" disabled={!isDirty}>{t("save")}</Button>
                 }
             />
         </form>

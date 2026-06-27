@@ -36,6 +36,11 @@ const Controls = ({serverStatus}) => {
                 if (res.length > 0) setIsDisabled(undefined);
                 reset();
             });
+        // Читаем состояние автостарта
+        fetch("/api/autostart")
+            .then(r => r.json())
+            .then(data => setAutostart(data.autostart))
+            .catch(() => {});
     }, []);
 
     const startServer = async (data) => {
@@ -57,7 +62,8 @@ const Controls = ({serverStatus}) => {
         setIsInstalling(true);
         await server.installVersion(selectedVersion);
         setIsInstalling(false);
-        window.location.reload();
+        // Ждём секунду чтобы версия обновилась
+        setTimeout(() => window.location.reload(), 1000);
     }
 
     const versionLabel = (type) => {
@@ -84,7 +90,15 @@ const Controls = ({serverStatus}) => {
                             <FontAwesomeIcon
                                 className={`cursor-pointer text-xl ${autostart ? 'text-green' : 'text-red'}`}
                                 icon={autostart ? faToggleOn : faToggleOff}
-                                onClick={() => setAutostart(!autostart)}
+                                onClick={() => {
+                                    const newVal = !autostart;
+                                    setAutostart(newVal);
+                                    fetch("/api/autostart", {
+                                        method: "POST",
+                                        headers: {"Content-Type": "application/json"},
+                                        body: JSON.stringify({autostart: newVal})
+                                    });
+                                }}
                             />
                             <span className="text-sm">{t("controls.autostart", "Автостарт")}</span>
                         </div>

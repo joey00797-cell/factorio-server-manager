@@ -462,6 +462,18 @@ var apiRoutes = Routes{
 		ModPackModPortalInstallMultipleHandler,
 		false,
 	}, {
+		"GetAutostart",
+		"GET",
+		"/autostart",
+		GetAutostartHandler,
+		false,
+	}, {
+		"SetAutostart",
+		"POST",
+		"/autostart",
+		SetAutostartHandler,
+		false,
+	}, {
 		"LocalesList",
 		"GET",
 		"/locales/list",

@@ -47,8 +47,15 @@
 - [ ] Real byte-based progress bar for mod downloads
 
 ### Server
-- [ ] Multi-server support (future)
+- [ ] Multi-server support:
+  - [ ] New server list page (empty state + "Create server" button)
+  - [ ] Server instance architecture (/opt/factorio-server/downloads/ + instances/)
+  - [ ] Download version → cached tar.xz, status: DOWNLOADED
+  - [ ] Create server → extract to instance folder, status: INSTALLED  
+  - [ ] Server card UI (name, IP, port, version, save, start/stop/kill)
+  - [ ] Limit to 1 server for now ("Multi-server coming soon" on second create)
 - [ ] Dual logs — Factorio server logs + FSM manager logs
+- [ ] Extended startup logging for debugging server-settings.json null bug
 
 ### Authentication
 - [ ] Show logged-in username on mod portal tab

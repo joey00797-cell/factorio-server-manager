@@ -91,39 +91,27 @@ func NewFactorioServer() (err error) {
 	settingsPath := config.SettingsFile
 	var settings *os.File
 
+	log.Printf("DEBUG: checking settings file: %s", settingsPath)
 	if _, err = os.Stat(settingsPath); os.IsNotExist(err) {
-		// copy example settings to supplied settings file, if not exists
-		log.Printf("Server settings at %s not found, copying example server settings.\n", settingsPath)
+		log.Printf("DEBUG: settings file NOT FOUND, loading default config")
 
-		examplePath := filepath.Join(config.FactorioDir, "data", "server-settings.example.json")
+		defaultContent := getDefaultServerSettings()
 
-		var example *os.File
-		example, err = os.Open(examplePath)
-		if err != nil {
-			log.Printf("failed to open example server settings: %v", err)
+		os.MkdirAll(filepath.Dir(settingsPath), 0755)
+		if err = os.WriteFile(settingsPath, []byte(defaultContent), 0644); err != nil {
+			log.Printf("failed to write default server settings: %v", err)
 			return
 		}
-		defer example.Close()
+		log.Printf("Default server-settings.json written to %s", settingsPath)
 
-		settings, err = os.Create(settingsPath)
+		settings, err = os.Open(settingsPath)
 		if err != nil {
-			log.Printf("failed to create server settings file: %v", err)
+			log.Printf("failed to open server settings file: %v", err)
 			return
 		}
 		defer settings.Close()
-
-		_, err = io.Copy(settings, example)
-		if err != nil {
-			log.Printf("failed to copy example server settings: %v", err)
-			return
-		}
-
-		err = example.Close()
-		if err != nil {
-			log.Printf("failed to close example server settings: %s", err)
-			return
-		}
 	} else {
+		log.Printf("DEBUG: settings file EXISTS, opening normally")
 		// otherwise, open file normally
 		settings, err = os.Open(settingsPath)
 		if err != nil {
@@ -230,10 +218,17 @@ func GetFactorioServer() (f *Server) {
 func (server *Server) Run() error {
 	var err error
 	config := bootstrap.GetConfig()
+	log.Printf("DEBUG Run(): starting, Savefile=%s BindIP=%s Port=%d", server.Savefile, server.BindIP, server.Port)
+	log.Printf("DEBUG Run(): Settings keys count=%d", len(server.Settings))
+	log.Printf("DEBUG Run(): SettingsFile=%s", config.SettingsFile)
+	log.Printf("DEBUG Run(): FactorioBinary=%s", config.FactorioBinary)
 	data, err := json.MarshalIndent(server.Settings, "", "  ")
 	if err != nil {
 		log.Println("Failed to marshal FactorioServerSettings: ", err)
+	} else if len(server.Settings) < 5 {
+		log.Printf("WARNING: server.Settings has only %d keys, skipping write to prevent corruption", len(server.Settings))
 	} else {
+		log.Printf("DEBUG Run(): writing %d settings keys to %s", len(server.Settings), config.SettingsFile)
 		ioutil.WriteFile(config.SettingsFile, data, 0644)
 	}
 
@@ -447,6 +442,7 @@ func (s *Server) RefreshVersion() error {
             if len(parts) >= 2 {
                 if err := s.Version.UnmarshalText([]byte(parts[1])); err == nil {
                     log.Printf("Factorio version updated: %s", s.Version.String())
+                    break
                 }
             }
         }

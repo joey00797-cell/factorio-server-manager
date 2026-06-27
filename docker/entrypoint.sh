@@ -40,5 +40,11 @@ if [ ! -f "$SETTINGS" ] || [ ! -s "$SETTINGS" ] || [ "$(cat $SETTINGS | tr -d '[
     fi
 fi
 
-cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80
+# Читаем autostart из conf.json
+AUTOSTART="false"
+if [ -f /opt/fsm-data/conf.json ]; then
+    AUTOSTART=$(jq -r '.autostart_server // false' /opt/fsm-data/conf.json)
+fi
+
+cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80 --autostart $AUTOSTART
 

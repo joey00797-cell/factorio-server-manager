@@ -71,7 +71,7 @@ const Saves = ({serverStatus}) => {
                             </thead>
                             <tbody>
                             {saves.map(save =>
-                                <tr className="py-2 md:py-1" key={save.name}>
+                                <tr className="py-2 md:py-1 hover:glow-orange hover:bg-orange hover:text-black cursor-pointer" key={save.name}>
                                     <td className="pr-4">{save.name}</td>
                                     <td className="pr-4">{(new Date(save.last_mod)).toLocaleString()}</td>
                                     <td className="pr-4">{parseFloat(save.size / 1024 / 1024).toFixed(3)} MB</td>

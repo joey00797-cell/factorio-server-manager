@@ -2,6 +2,7 @@ import React from "react";
 
 const Input = ({
                    register,
+                   name,
                    placeholder = undefined,
                    type = "text",
                    defaultValue = undefined,
@@ -16,7 +17,7 @@ const Input = ({
         <input
             className="shadow appearance-none border w-full py-2 px-3 text-black"
             placeholder={placeholder}
-            {...register}
+            {...(name && register ? register(name) : (register || {}))}
             type={type}
             onKeyDown={onKeyDown}
             autoComplete={hasAutoComplete ? "on" : "off"}

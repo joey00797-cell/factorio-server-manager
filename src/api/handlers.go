@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
@@ -720,10 +719,21 @@ func GetServerSettings(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-	var server = factorio.GetFactorioServer()
-	resp = server.Settings
-
-	log.Printf("Sent server settings response")
+	config := bootstrap.GetConfig()
+	data, err := os.ReadFile(config.SettingsFile)
+	if err != nil {
+		log.Printf("Error reading server settings file: %v", err)
+		resp = map[string]interface{}{}
+		return
+	}
+	var settings map[string]interface{}
+	if err := json.Unmarshal(data, &settings); err != nil || settings == nil {
+		log.Printf("Error parsing server settings: %v", err)
+		resp = map[string]interface{}{}
+		return
+	}
+	resp = settings
+	log.Printf("Sent server settings response (%d keys)", len(settings))
 }
 
 func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
@@ -739,36 +749,57 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	log.Printf("Received settings JSON: %s", body)
-	var server = factorio.GetFactorioServer()
-
-	// Race Condition while unmarshal possible
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		err = json.Unmarshal(body, &server.Settings)
-		wg.Done()
-	}()
-
-	// Wait for unmarshal to avoid race condition
-	wg.Wait()
-
-	if err != nil {
-		resp = fmt.Sprintf("Error unmarhaling server settings JSON: %s", err)
+	// Логируем только изменённые поля
+	var incomingSettings map[string]interface{}
+	if err := json.Unmarshal(body, &incomingSettings); err == nil {
+		diffConfig := bootstrap.GetConfig()
+		existingRaw, _ := os.ReadFile(diffConfig.SettingsFile)
+		var existingForDiff map[string]interface{}
+		json.Unmarshal(existingRaw, &existingForDiff)
+		for k, v := range incomingSettings {
+			if strings.HasPrefix(k, "_comment") {
+				continue
+			}
+			oldV, exists := existingForDiff[k]
+			if !exists || fmt.Sprintf("%v", oldV) != fmt.Sprintf("%v", v) {
+				log.Printf("Settings changed: %s = %v", k, v)
+			}
+		}
+	}
+	config := bootstrap.GetConfig()
+	// Читаем текущий файл
+	existingData, err2 := os.ReadFile(config.SettingsFile)
+	var currentSettings map[string]interface{}
+	if err2 == nil {
+		json.Unmarshal(existingData, &currentSettings)
+	}
+	if currentSettings == nil {
+		currentSettings = make(map[string]interface{})
+	}
+	// Мержим новые данные поверх существующих
+	var newSettings map[string]interface{}
+	if err = json.Unmarshal(body, &newSettings); err != nil {
+		resp = fmt.Sprintf("Error unmarshaling settings: %s", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	for k, v := range newSettings {
+		// не затираем существующее значение если новое = null
+		if v != nil {
+			currentSettings[k] = v
+		}
+	}
+	var server = factorio.GetFactorioServer()
+	server.Settings = currentSettings
 
-	settings, err := json.MarshalIndent(&server.Settings, "", "  ")
+	settings, err := json.MarshalIndent(currentSettings, "", "  ")
 	if err != nil {
 		resp = fmt.Sprintf("Failed to marshal server settings: %s", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	config := bootstrap.GetConfig()
 	err = ioutil.WriteFile(config.SettingsFile, settings, 0644)
 	if err != nil {
 		resp = fmt.Sprintf("Failed to save server settings: %v\n", err)
@@ -814,6 +845,13 @@ func AvailableVersions(w http.ResponseWriter, r *http.Request) {
 }
 
 // InstallFactorio downloads and installs a specific Factorio version
+func min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+}
+
 func InstallFactorio(w http.ResponseWriter, r *http.Request) {
     var resp interface{}
     defer func() { WriteResponse(w, resp) }()
@@ -867,6 +905,7 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
         // Перезаписываем только если файл пустой или содержит null
         existingData, _ := os.ReadFile(settingsDst)
         trimmed := strings.TrimSpace(string(existingData))
+        log.Printf("server-settings check: len=%d trimmed=%q", len(trimmed), trimmed[:min(len(trimmed), 20)])
         if trimmed == "" || trimmed == "null" || len(trimmed) < 10 {
             os.WriteFile(settingsDst, src, 0644)
             log.Printf("server-settings.json создан из примера")
