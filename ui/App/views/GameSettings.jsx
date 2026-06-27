@@ -7,10 +7,19 @@ const GameSettings = () => {
     const { t } = useTranslation();
 
     const [settingsCategories, setSettingsCategories] = useState();
+    const [loadError, setLoadError] = useState(false);
 
     const fetchSettings = async () => {
-        const res = await settingsResource.game.list();
-        setSettingsCategories(res);
+        try {
+            const res = await settingsResource.game.list();
+            if (res && Object.keys(res).length > 0) {
+                setSettingsCategories(res);
+            } else {
+                setLoadError(true);
+            }
+        } catch (e) {
+            setLoadError(true);
+        }
     }
 
     useEffect(() => {
@@ -18,6 +27,12 @@ const GameSettings = () => {
     }, []);
 
     return (
+        <>
+        {loadError && (
+            <div className="mb-4 p-3 bg-red bg-opacity-20 border border-red rounded text-red-light font-bold">
+                ⚠ {t("game_settings.not_available")}
+            </div>
+        )}
         <Panel
             className="mb-4"
             title={t("game_settings.title")}
@@ -48,6 +63,7 @@ const GameSettings = () => {
                 </>
             }
         />
+        </>
     )
 }
 

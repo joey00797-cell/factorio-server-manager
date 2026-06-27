@@ -207,7 +207,8 @@
         }
     },
     "game_settings": {
-        "title": "Game Settings"
+        "title": "Game Settings",
+        "not_available": "config.ini not available. Install and run Factorio at least once."
     },
     "lang": "Language",
     "lang_download_template": "Download Template",

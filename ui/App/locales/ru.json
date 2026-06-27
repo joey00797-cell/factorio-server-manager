@@ -208,7 +208,8 @@
         }
     },
     "game_settings": {
-        "title": "Настройки игры"
+        "title": "Настройки игры",
+        "not_available": "config.ini недоступен. Установите и запустите Factorio хотя бы раз."
     },
     "lang": "Язык",
     "lang_download_template": "Скачать шаблон",

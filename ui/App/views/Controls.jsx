@@ -75,7 +75,7 @@ const Controls = ({serverStatus}) => {
         <form onSubmit={handleSubmit(startServer)}>
         {!isFactorioInstalled && (
             <div className="mb-4 p-3 bg-red bg-opacity-20 border border-red rounded text-red-light font-bold">
-                ⚠ {t("controls.factorio_not_installed", "Factorio не установлен. Выберите версию и нажмите «Установить Factorio».")}
+                ⚠ {t("controls.factorio_not_installed")}
             </div>
         )}
         <Panel
@@ -100,7 +100,7 @@ const Controls = ({serverStatus}) => {
                                     });
                                 }}
                             />
-                            <span className="text-sm">{t("controls.autostart", "Автостарт")}</span>
+                            <span className="text-sm">{t("controls.autostart")}</span>
                         </div>
                     </div>
 
@@ -177,7 +177,7 @@ const Controls = ({serverStatus}) => {
                         <Button onClick={killServer} isLoading={isKilling} isDisabled={isStopping} size="sm" type="danger" className="w-full md:w-auto">{t("controls.kill_server")}</Button>
                     </> : <>
                         <Button isSubmit={true} isDisabled={isDisabled || isInstalling || !isFactorioInstalled} isLoading={isStarting} size="sm" type="success" className="w-full md:w-auto">{t("controls.start_server")}</Button>
-                        <Button onClick={installVersion} isLoading={isInstalling} isDisabled={serverStatus.running} size="sm" type="default" className="w-full md:w-auto">{t("controls.install_factorio", "Установить Factorio")}</Button>
+                        <Button onClick={installVersion} isLoading={isInstalling} isDisabled={serverStatus.running} size="sm" type="default" className="w-full md:w-auto">{t("controls.install_factorio")}</Button>
                     </>}
                 </div>
             }
