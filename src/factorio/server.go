@@ -333,7 +333,7 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 	for stdScanner.Scan() {
 		text := stdScanner.Text()
 
-		log.Printf("Factorio Server: %s", text)
+		log.Printf("[SRV] %s", text)
 		if err := server.writeLog(text); err != nil {
 			log.Printf("Error: %s", err)
 		}

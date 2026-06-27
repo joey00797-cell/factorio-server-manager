@@ -120,7 +120,7 @@ function ChangeLangDialog({isOpen, close, onSuccess}) {
                     {/* Предложение применить загруженный язык */}
                     {pendingLang && (
                         <div className="mt-3 p-2 border border-green-400 rounded text-sm">
-                            <p className="mb-2 text-green-400">{t("lang_apply_question", "Применить загруженный язык?")}</p>
+                            <p className="mb-2 text-green-400">{t("lang_apply_question")}</p>
                             <div className="flex gap-2 flex-wrap">
                                 <Button size="sm" type="success" onClick={() => {
                                     i18n.changeLanguage(pendingLang);

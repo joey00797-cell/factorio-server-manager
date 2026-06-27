@@ -217,6 +217,6 @@
     "lang_upload_ok": "Language uploaded!",
     "lang_upload_err": "Upload error",
     "lang_download_current": "Download this language",
-    "lang_apply_question": "Apply the uploaded language?",
+    "lang_apply_question": "Apply uploaded language?",
     "lang_overwrite_question": "File already exists. Replace it?"
 }

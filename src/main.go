@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetPrefix("[FSM] ")
 	// get the all configs based on the flags
 	config := bootstrap.NewConfig(os.Args[1:])
 
