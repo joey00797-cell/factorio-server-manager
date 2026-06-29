@@ -25,6 +25,8 @@ type Flags struct {
 	FactorioMaxUpload  int64  `long:"max-upload" default:"20" description:"Maximum filesize for uploaded files in MB." env:"FSM_MAX_UPLOAD"`
 	FactorioBinary     string `long:"bin" default:"bin/x64/factorio" description:"Location of Factorio Server binary file." env:"FSM_BINARY"`
 	FactorioRconPort   int    `long:"rcon-port" default:"0" description:"Specify port for rcon admin console." env:"FSM_RCON_PORT"`
+	ServersRoot        string `long:"servers-root" default:"/opt/factorio-server" description:"Directory for managed Factorio versions and server instances." env:"FSM_SERVERS_ROOT"`
+	GamePortRange      string `long:"game-port-range" default:"34197-34220" description:"UDP port range used for managed Factorio servers." env:"FSM_GAME_PORT_RANGE"`
 	GlibcCustom        string `long:"glibc-custom" default:"false" description:"By default false, if custom glibc is required set this to true and add glibc-loc and glibc-lib-loc parameters." env:"FSM_GLIBC_CUSTOM"`
 	GlibcLocation      string `long:"glibc-loc" default:"/opt/glibc-2.18/lib/ld-2.18.so" description:"Location glibc ld.so file if needed (ex. /opt/glibc-2.18/lib/ld-2.18.so)." env:"FSM_GLIBC_LOCATION"`
 	GlibcLibLoc        string `long:"glibc-lib-loc" default:"/opt/glibc-2.18/lib" description:"Location of glibc lib folder (ex. /opt/glibc-2.18/lib)." env:"FSM_GLIBC_LIB"`
@@ -67,6 +69,8 @@ type Config struct {
 	ChatLogFile             string `json:"chat_log_file,omitempty"` // separate log file for chat (incl join/quit)
 	Secure                  bool   `json:"secure"`                  // set to `false` to use this tool without SSL/TLS (Default: `true`)
 	AutostartServer         bool   `json:"autostart_server,omitempty"`
+	ServersRoot             string `json:"servers_root,omitempty"`
+	GamePortRange           string `json:"game_port_range,omitempty"`
 }
 
 // set Configs default values. JSON unmarshal will replace when it found something different
@@ -194,6 +198,18 @@ func (config *Config) loadServerConfig() {
 		config.FactorioRconPort = randomPort()
 		log.Printf("Rcon port is empty\t\tgenerated new one: %d", config.FactorioRconPort)
 	}
+
+	if config.ServersRoot == "" {
+		config.ServersRoot = "/opt/factorio-server"
+	}
+
+	if config.GamePortRange == "" {
+		config.GamePortRange = "34197-34220"
+	}
+
+	if config.LogFile == "" {
+		config.LogFile = filepath.Join(config.ServersRoot, "logs", "fsm.log")
+	}
 }
 
 // Returns random port to use for rcon connection
@@ -224,6 +240,8 @@ func (config *Config) mapFlags(flags Flags) {
 	config.FactorioAdminFile = "server-adminlist.json"
 	config.ConsoleLogFile = filepath.Join(flags.FactorioDir, "factorio-server-console.log")
 	config.FactorioRconPort = flags.FactorioRconPort
+	config.ServersRoot = flags.ServersRoot
+	config.GamePortRange = flags.GamePortRange
 
 	config.MaxUploadSize = flags.FactorioMaxUpload * 100000
 	

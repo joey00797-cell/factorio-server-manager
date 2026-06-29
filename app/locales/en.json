@@ -22,6 +22,10 @@
     "main_title": "Factorio Server Manager",
     "server_settings": {
         "title": "Server settings",
+        "network_title": "Server network",
+        "bind_ip": "Bind IP",
+        "port_restart_note": "Changing the port while running will require a restart.",
+        "network_save_error": "Error saving server network settings.",
         "admins": "Admins",
         "name": "Name",
         "description": "Description",
@@ -109,7 +113,23 @@
         "save": "Save",
         "save&stop": "Save & Stop Server",
         "kill_server": "Kill Server",
-        "start_server": "Start Server"
+        "start_server": "Start Server",
+        "autostart": "Autostart",
+        "install_factorio": "Install Factorio",
+        "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio»."
+    },
+    "servers": {
+        "create": "Create server",
+        "pending_restart": "restart pending",
+        "manage": "Manage",
+        "save_now": "Save",
+        "delete": "Delete Server",
+        "confirm_delete": "Confirm delete",
+        "cant_start_no_save": "Create or upload a save before starting this server.",
+        "cant_delete_running": "Stop this server before deleting it.",
+        "editing": "Editing server",
+        "server": "Server",
+        "id": "ID"
     },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",
@@ -151,7 +171,9 @@
         "status_already_installed": "Already installed",
         "status_builtin": "Built-in / DLC",
         "status_not_found": "Not found on portal",
-        "status_downloading": "Downloading..."
+        "status_downloading": "Downloading...",
+        "mod_options": "Mod Options",
+        "mod_options_raw_note": "Edit the raw base64 encoded mod-settings.dat for this server."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",
@@ -160,6 +182,8 @@
         "username_error_message": "Username is required",
         "password_error_message": "Password is required",
         "sign_in": "Sign In",
+        "password_or_token": "Password or Token",
+        "factorio_credentials_validation_error": "Factorio accepted the login request, but the saved credentials could not be validated.",
         "factorio_login_error_message": "Given username or email and password do not match any account."
     },
     "console": {
@@ -168,6 +192,9 @@
     },
     "logs": {
         "title": "Logs"
+    },
+    "fsm_logs": {
+        "title": "FSM Logs"
     },
     "help": {
         "title": "Help",
@@ -202,12 +229,16 @@
         }
     },
     "game_settings": {
-        "title": "Game Settings"
+        "title": "Game Settings",
+        "not_available": "config.ini not available. Install and run Factorio at least once."
     },
     "lang": "Language",
     "lang_download_template": "Download Template",
     "lang_upload": "Upload Language",
     "lang_uploading": "Uploading...",
     "lang_upload_ok": "Language uploaded!",
-    "lang_upload_err": "Upload error"
+    "lang_upload_err": "Upload error",
+    "lang_download_current": "Download this language",
+    "lang_apply_question": "Apply uploaded language?",
+    "lang_overwrite_question": "File already exists. Replace it?"
 }

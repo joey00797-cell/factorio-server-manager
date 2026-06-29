@@ -46,5 +46,5 @@ if [ -f /opt/fsm-data/conf.json ]; then
     AUTOSTART=$(jq -r '.autostart_server // false' /opt/fsm-data/conf.json)
 fi
 
-cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80 --autostart $AUTOSTART
+cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio-server --servers-root /opt/factorio-server --port 80 --autostart $AUTOSTART
 

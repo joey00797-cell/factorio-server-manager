@@ -22,6 +22,10 @@
     "main_title": "Factorio Server Manager",
     "server_settings": {
         "title": "Server settings",
+        "network_title": "服务器网络",
+        "bind_ip": "绑定 IP",
+        "port_restart_note": "运行时更改端口需要重启。",
+        "network_save_error": "保存服务器网络设置时出错。",
         "admins": "Admins",
         "name": "Name",
         "description": "Description",
@@ -114,6 +118,20 @@
         "install_factorio": "安装 Factorio",
         "factorio_not_installed": "Factorio 未安装。请选择版本并点击「安装 Factorio」。"
     },
+    "servers": {
+        "create": "创建服务器",
+        "pending_restart": "需要重启",
+        "manage": "管理",
+        "save_now": "保存",
+        "delete": "删除服务器",
+        "confirm_delete": "确认删除",
+        "cant_start_no_save": "启动服务器前请先创建或上传存档。",
+        "cant_delete_running": "删除前请先停止此服务器。",
+        "editing": "正在编辑服务器",
+        "server": "服务器",
+        "id": "ID",
+        "running_summary": "{{running}} / {{total}} 个服务器正在运行"
+    },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",
         "install_mod": "Install Mod",
@@ -154,7 +172,9 @@
         "status_already_installed": "Already installed",
         "status_builtin": "Built-in / DLC",
         "status_not_found": "Not found on portal",
-        "status_downloading": "Downloading..."
+        "status_downloading": "Downloading...",
+        "mod_options": "模组设置",
+        "mod_options_raw_note": "编辑此服务器的 mod-settings.dat raw base64 内容。"
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",
@@ -171,6 +191,9 @@
     },
     "logs": {
         "title": "Logs"
+    },
+    "fsm_logs": {
+        "title": "FSM 日志"
     },
     "help": {
         "title": "Help",
@@ -205,7 +228,8 @@
         }
     },
     "game_settings": {
-        "title": "Game Settings"
+        "title": "Game Settings",
+        "not_available": "config.ini 不可用。请至少安装并运行一次 Factorio。"
     },
     "lang": "语言",
     "lang_download_template": "下载模板",

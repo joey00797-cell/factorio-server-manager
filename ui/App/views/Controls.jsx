@@ -1,247 +1,279 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
+import {Link} from "react-router-dom";
 import Panel from "../components/Panel";
 import Button from "../components/Button";
-import server from "../../api/resources/server";
+import serverResource from "../../api/resources/server";
 import savesResource from "../../api/resources/saves";
-import {useForm} from "react-hook-form";
-import Select from "../components/Select";
-import Input from "../components/Input";
-import Error from "../components/Error";
-import { useTranslation } from "react-i18next";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import socket from "../../api/socket";
-import {faToggleOn, faToggleOff} from "@fortawesome/free-solid-svg-icons";
+import {useTranslation} from "react-i18next";
 
-const Controls = ({serverStatus}) => {
+const emptyCreate = {
+    name: "",
+    version: "stable",
+    bind_ip: "0.0.0.0",
+    port: "",
+    autostart: false,
+};
+
+const Controls = () => {
     const { t } = useTranslation();
-    const factorioVersion = serverStatus.fac_version ? serverStatus.fac_version : t("controls.unknown");
-    const isFactorioInstalled = serverStatus.fac_version && serverStatus.fac_version !== "0.0.0.0";
+    const [servers, setServers] = useState([]);
     const [availableVersions, setAvailableVersions] = useState({});
-    const [isInstalling, setIsInstalling] = useState(false);
-    const [installProgress, setInstallProgress] = useState(0);
-    const [installCurrent, setInstallCurrent] = useState(0);
-    const [installTotal, setInstallTotal] = useState(0);
-    const [isExtracting, setIsExtracting] = useState(false);
-    const [selectedVersion, setSelectedVersion] = useState('stable');
-    const [autostart, setAutostart] = useState(false);
-    const [saves, setSaves] = useState([]);
-    const [isDisabled, setIsDisabled] = useState(true);
-    const [isStopping, setIsStopping] = useState(false);
-    const [isStarting, setIsStarting] = useState(false);
-    const [isKilling, setIsKilling] = useState(false);
+    const [createForm, setCreateForm] = useState(emptyCreate);
+    const [savesByServer, setSavesByServer] = useState({});
+    const [selectedSaveByServer, setSelectedSaveByServer] = useState({});
+    const [busy, setBusy] = useState({});
 
-    const { handleSubmit, reset, register, formState: {errors} } = useForm();
+    const fetchServers = async () => {
+        const data = await serverResource.list();
+        setServers(data || []);
+        (data || []).forEach(loadSaves);
+    };
 
-    useEffect(() => {
-        server.availableVersions()
-            .then(res => setAvailableVersions(res));
-        savesResource.list(true)
-            .then(res => {
-                setSaves(res);
-                if (res.length > 0) setIsDisabled(undefined);
-                reset();
-            });
-        // Читаем состояние автостарта
-        fetch("/api/autostart")
-            .then(r => r.json())
-            .then(data => setAutostart(data.autostart))
-            .catch(() => {});
-    }, []);
-
-    const startServer = async (data) => {
-        setIsStarting(true);
-        await server.start(data.ip, parseInt(data.port), data.save);
-    }
-
-    const stopServer = async () => {
-        setIsStopping(true);
-        await server.stop();
-    }
-
-    const killServer = async () => {
-        setIsKilling(true);
-        await server.kill();
-    }
+    const loadSaves = async (srv) => {
+        if (!srv?.id) return;
+        const saves = await savesResource.list(true, srv.id);
+        setSavesByServer(prev => ({...prev, [srv.id]: saves || []}));
+        setSelectedSaveByServer(prev => {
+            if (prev[srv.id]) return prev;
+            const latest = (saves || []).find(save => save.name.startsWith("Load Latest"));
+            return {...prev, [srv.id]: latest?.name || saves?.[0]?.name || ""};
+        });
+    };
 
     useEffect(() => {
-        socket.emit('server version subscribe');
-        server.installStatus().then(status => {
-            if (status && status.installing) {
-                setIsInstalling(true);
-                setInstallProgress(status.progress || 0);
-            }
-        }).catch(() => {});
-        const handleVersionMsg = (msg) => {
-            try {
-                const data = JSON.parse(msg);
-                if (data.type === 'download_progress') {
-                    setInstallProgress(data.percent);
-                    setInstallCurrent(Math.round(data.current / 1024 / 1024 * 10) / 10);
-                    setInstallTotal(Math.round(data.total / 1024 / 1024 * 10) / 10);
-                } else if (data.type === 'extracting') {
-                    setInstallProgress(100);
-                    setIsExtracting(true);
-                } else if (data.type === 'install_complete') {
-                    setIsInstalling(false);
-                    setIsExtracting(false);
-                    setInstallProgress(0);
-                    setInstallCurrent(0);
-                    setInstallTotal(0);
-                    window.flash('Factorio ' + data.version + ' installed!', 'green');
-                } else if (data.type === 'install_error') {
-                    setIsInstalling(false);
-                    setIsExtracting(false);
-                    setInstallProgress(0);
-                    window.flash('Install failed: ' + data.error, 'red');
-                }
-            } catch(e) {}
-        };
-        socket.on('server_version', handleVersionMsg);
-        return () => socket.off('server_version', handleVersionMsg);
+        fetchServers();
+        serverResource.availableVersions().then(setAvailableVersions).catch(() => {});
     }, []);
-
-    const installVersion = async () => {
-        setIsInstalling(true);
-        setInstallProgress(0);
-        try {
-            await server.installVersion(selectedVersion);
-        } catch(e) {
-            if (e?.response?.status !== 409) {
-                setIsInstalling(false);
-                window.flash('Install failed', 'red');
-            }
-        }
-    }
 
     const versionLabel = (type) => {
         const v = availableVersions?.[type]?.headless;
         return v ? `${type} (${v})` : type;
-    }
+    };
+
+    const setBusyFor = (id, action, value) => {
+        setBusy(prev => ({...prev, [`${id}:${action}`]: value}));
+    };
+
+    const runAction = async (srv, action, fn) => {
+        setBusyFor(srv.id, action, true);
+        try {
+            await fn();
+            await fetchServers();
+        } finally {
+            setBusyFor(srv.id, action, false);
+        }
+    };
+
+    const createServer = async (e) => {
+        e.preventDefault();
+        const payload = {
+            ...createForm,
+            port: createForm.port ? parseInt(createForm.port) : 0,
+        };
+        await serverResource.create(payload);
+        setCreateForm(emptyCreate);
+        await fetchServers();
+    };
 
     return (
-        <form onSubmit={handleSubmit(startServer)}>
-        {!isFactorioInstalled && (
-            <div className="mb-4 p-3 bg-red bg-opacity-20 border border-red rounded text-red-light font-bold">
-                ⚠ {t("controls.factorio_not_installed")}
-            </div>
-        )}
-        <Panel
-            title={t("controls.title")}
-            content={
-                <div className="lg:flex">
-                    {/* Статус + Автостарт */}
-                    <div className="lg:flex-1 mb-2 min-w-0">
-                        <div className="font-bold">{t("controls.status")}</div>
-                        <div>{serverStatus.running ? t("controls.running") : t("controls.stopped")}</div>
-                        <div className="mt-2 flex items-center gap-2">
-                            <FontAwesomeIcon
-                                className={`cursor-pointer text-xl ${autostart ? 'text-green' : 'text-red'}`}
-                                icon={autostart ? faToggleOn : faToggleOff}
-                                onClick={() => {
-                                    const newVal = !autostart;
-                                    setAutostart(newVal);
-                                    fetch("/api/autostart", {
-                                        method: "POST",
-                                        headers: {"Content-Type": "application/json"},
-                                        body: JSON.stringify({autostart: newVal})
-                                    });
-                                }}
-                            />
-                            <span className="text-sm">{t("controls.autostart")}</span>
-                        </div>
-                    </div>
+        <>
+            <Panel
+                className="mb-6"
+                title={t("servers.create", "Create server")}
+                content={
+                    <form className="grid gap-3 lg:grid-cols-5" onSubmit={createServer}>
+                        <input
+                            className="shadow appearance-none border py-2 px-3 text-black"
+                            placeholder={t("name")}
+                            value={createForm.name}
+                            onChange={e => setCreateForm({...createForm, name: e.target.value})}
+                        />
+                        <select
+                            className="shadow appearance-none border py-2 px-3 text-black"
+                            value={createForm.version}
+                            onChange={e => setCreateForm({...createForm, version: e.target.value})}
+                        >
+                            <option value="stable">{versionLabel("stable")}</option>
+                            <option value="experimental">{versionLabel("experimental")}</option>
+                        </select>
+                        <input
+                            className="shadow appearance-none border py-2 px-3 text-black"
+                            value={createForm.bind_ip}
+                            onChange={e => setCreateForm({...createForm, bind_ip: e.target.value})}
+                        />
+                        <input
+                            className="shadow appearance-none border py-2 px-3 text-black"
+                            placeholder={t("controls.port")}
+                            type="number"
+                            min={1}
+                            max={65535}
+                            value={createForm.port}
+                            onChange={e => setCreateForm({...createForm, port: e.target.value})}
+                        />
+                        <Button isSubmit={true} type="success" className="w-full">{t("create")}</Button>
+                    </form>
+                }
+            />
 
-                    {serverStatus.running ? <>
-                        <div className="lg:flex-1 mb-2 min-w-0">
-                            <div className="font-bold">IP</div>
-                            <div>{serverStatus.bindip}</div>
-                        </div>
-                        <div className="lg:flex-1 mb-2 min-w-0">
-                            <div className="font-bold">{t("controls.port")}</div>
-                            <div>{serverStatus.port}</div>
-                        </div>
-                        <div className="lg:flex-1 mb-2 min-w-0">
-                            <div className="font-bold">{t("controls.f_version")}</div>
-                            <div>{factorioVersion}</div>
-                        </div>
-                        <div className="lg:flex-1 mb-2 min-w-0">
-                            <div className="font-bold">{t("controls.save")}</div>
-                            <div>{serverStatus.savefile}</div>
-                        </div>
-                    </> : <>
-                        <div className="lg:flex-1 mb-2 mr-0 lg:mr-4 min-w-0">
-                            <div className="font-bold">IP</div>
-                            <Input
-                                defaultValue={"0.0.0.0"}
-                                disabled={isDisabled}
-                                register={register('ip',{required: true, pattern: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/})}
-                            />
-                            <Error error={errors.ip} message={t("controls.IP_error_message")}/>
-                        </div>
-                        <div className="lg:flex-1 mb-2 mr-0 lg:mr-4 min-w-0">
-                            <div className="font-bold">{t("controls.port")}</div>
-                            <Input
-                                type="number"
-                                min={1}
-                                max={65535}
-                                defaultValue={"34197"}
-                                disabled={isDisabled}
-                                register={register('port',{required: true, min: 1, max: 65535})}
-                            />
-                            <Error error={errors.port} message={t("controls.port_error_message")}/>
-                        </div>
-                        <div className="lg:flex-1 mb-2 mr-0 lg:mr-4 min-w-0">
-                            <div className="font-bold">{t("controls.f_version")}</div>
-                            <select
-                                className="w-full border rounded px-2 py-2 text-black"
-                                value={selectedVersion}
-                                onChange={e => setSelectedVersion(e.target.value)}
-                                disabled={serverStatus.running || isInstalling}
-                            >
-                                <option value="stable">{versionLabel('stable')}</option>
-                                <option value="experimental">{versionLabel('experimental')}</option>
-                            </select>
-                        </div>
-                        <div className="lg:flex-1 mb-2 min-w-0">
-                            <div className="font-bold">{t("controls.save")}</div>
-                            <div className="relative">
-                                <Select
-                                    register={register('save',{required: true})}
-                                    defaultValue={saves.find((save) => save.name.startsWith('Load Latest'))?.name}
-                                    disabled={isDisabled}
-                                    options={saves.map(save => ({value: save.name, name: save.name}))}
-                                />
-                                <Error error={errors.save} message={t("controls.save_error_message")}/>
-                            </div>
-                        </div>
-                    </>}
-                </div>
-            }
-            actions={
-                <>
-                <div className="md:flex items-center gap-2">
-                    {serverStatus.running ? <>
-                        <Button onClick={stopServer} isLoading={isStopping} isDisabled={isKilling} size="sm" className="w-full md:w-auto mb-2 md:mb-0" type="default">{t("controls.save&stop")}</Button>
-                        <Button onClick={killServer} isLoading={isKilling} isDisabled={isStopping} size="sm" type="danger" className="w-full md:w-auto">{t("controls.kill_server")}</Button>
-                    </> : <>
-                        <Button isSubmit={true} isDisabled={isDisabled || isInstalling || !isFactorioInstalled} isLoading={isStarting} size="sm" type="success" className="w-full md:w-auto">{t("controls.start_server")}</Button>
-                        <Button onClick={installVersion} isLoading={isInstalling} isDisabled={serverStatus.running} size="sm" type="default" className="w-full md:w-auto">{t("controls.install_factorio")}</Button>
-                    </>
-                    }
-                </div>
-                {isInstalling && (
-                    <div className="mt-4 mx-2">
-                        <div className="w-full bg-gray-dark rounded h-3">
-                            <div className="bg-orange h-3 rounded transition-all duration-300" style={{width: `${installProgress}%`}}/>
-                        </div>
-                        <p className="text-sm text-gray-light mt-1">{isExtracting ? t("controls.extracting") : t("controls.downloading", {current: installCurrent, total: installTotal})}</p>
-                    </div>
-                )}
-                </>
-            }
-        />
-        </form>
-    )
+            <div className="grid gap-4 xl:grid-cols-2">
+                {servers.map(srv => (
+                    <ServerCard
+                        key={srv.id}
+                        server={srv}
+                        saves={savesByServer[srv.id] || []}
+                        selectedSave={selectedSaveByServer[srv.id] || ""}
+                        setSelectedSave={save => setSelectedSaveByServer(prev => ({...prev, [srv.id]: save}))}
+                        busy={busy}
+                        runAction={runAction}
+                        t={t}
+                    />
+                ))}
+            </div>
+        </>
+    );
 };
+
+const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runAction, t}) => {
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const versionText = useMemo(() => {
+        if (server.fac_version && server.fac_version !== "0.0.0.0") return server.fac_version;
+        return server.version || t("controls.unknown");
+    }, [server, t]);
+
+    const running = !!server.running;
+    const noSave = saves.length === 0;
+    const deleteDisabledReason = running ? t("servers.cant_delete_running", "Stop this server before deleting it.") : "";
+    const startDisabledReason = noSave ? t("servers.cant_start_no_save", "Create or upload a save before starting this server.") : "";
+
+    useEffect(() => {
+        if (!isConfirmingDelete) return;
+        const timeout = setTimeout(() => setIsConfirmingDelete(false), 8000);
+        return () => clearTimeout(timeout);
+    }, [isConfirmingDelete]);
+
+    const deleteServer = () => {
+        if (!isConfirmingDelete) {
+            setIsConfirmingDelete(true);
+            return;
+        }
+        runAction(server, "delete", () => serverResource.deleteServer(server.id))
+            .finally(() => setIsConfirmingDelete(false));
+    };
+
+    return (
+        <div className="bg-gray-dark accentuated p-4">
+            <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h2 className="text-dirty-white text-xl font-bold">{server.name || `Server ${server.id}`}</h2>
+                    <div className={running ? "text-green font-bold" : "text-red font-bold"}>
+                        {running ? t("controls.running") : t("controls.stopped")}
+                        {server.pending_restart ? <span className="ml-2 text-orange">({t("servers.pending_restart", "restart pending")})</span> : null}
+                    </div>
+                </div>
+                <Link
+                    className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold"
+                    to={`/servers/${server.id}/saves`}
+                >
+                    {t("servers.manage", "Manage")}
+                </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <Info label="IP" value={server.bindip || server.bind_ip || "0.0.0.0"}/>
+                <Info label={t("controls.port")} value={server.port || "-"}/>
+                <Info label={t("controls.f_version")} value={versionText}/>
+                <Info label={t("controls.save")} value={server.savefile || "-"}/>
+            </div>
+
+            {!running && (
+                <div className="mb-3">
+                    <select
+                        className="shadow appearance-none border w-full py-2 px-3 text-black"
+                        value={selectedSave}
+                        disabled={noSave}
+                        onChange={e => setSelectedSave(e.target.value)}
+                    >
+                        {saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
+                    </select>
+                </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+                {running ? (
+                    <>
+                        <Button
+                            size="sm"
+                            type="default"
+                            isLoading={busy[`${server.id}:save`]}
+                            onClick={() => runAction(server, "save", () => serverResource.save(server.id))}
+                        >
+                            {t("servers.save_now", "Save")}
+                        </Button>
+                        <Button
+                            size="sm"
+                            type="default"
+                            isLoading={busy[`${server.id}:stop`]}
+                            onClick={() => runAction(server, "stop", () => serverResource.stop(server.id))}
+                        >
+                            {t("controls.save&stop")}
+                        </Button>
+                        <Button
+                            size="sm"
+                            type="danger"
+                            isLoading={busy[`${server.id}:kill`]}
+                            onClick={() => runAction(server, "kill", () => serverResource.kill(server.id))}
+                        >
+                            {t("controls.kill_server")}
+                        </Button>
+                    </>
+                ) : (
+                    <span className={`inline-block ${startDisabledReason ? "cursor-not-allowed" : ""}`} title={startDisabledReason || undefined}>
+                        <Button
+                            className={startDisabledReason ? "pointer-events-none" : ""}
+                            size="sm"
+                            type="success"
+                            isDisabled={!!startDisabledReason}
+                            isLoading={busy[`${server.id}:start`]}
+                            onClick={() => runAction(server, "start", () => serverResource.start(server.bindip || server.bind_ip || "0.0.0.0", server.port || 34197, selectedSave, server.id))}
+                        >
+                            {t("controls.start_server")}
+                        </Button>
+                    </span>
+                )}
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/mods`}>
+                    {t("mods.title")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/server-settings`}>
+                    {t("server_settings.title")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/mod-options`}>
+                    {t("mods.mod_options", "Mod Options")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/console`}>
+                    {t("console.title")}
+                </Link>
+                <span className={`inline-block ${deleteDisabledReason ? "cursor-not-allowed" : ""}`} title={deleteDisabledReason || undefined}>
+                    <Button
+                        className={deleteDisabledReason ? "pointer-events-none" : ""}
+                        size="sm"
+                        type="danger"
+                        isDisabled={!!deleteDisabledReason}
+                        isLoading={busy[`${server.id}:delete`]}
+                        onClick={deleteServer}
+                    >
+                        {isConfirmingDelete ? t("servers.confirm_delete", "Confirm delete") : t("servers.delete", "Delete Server")}
+                    </Button>
+                </span>
+            </div>
+        </div>
+    );
+};
+
+const Info = ({label, value}) => (
+    <div>
+        <div className="font-bold">{label}</div>
+        <div className="break-words">{value}</div>
+    </div>
+);
 
 export default Controls;

@@ -6,14 +6,19 @@ import UploadSaveForm from "./components/UploadSaveForm";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faDownload, faTrashAlt} from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
+import {useParams} from "react-router-dom";
+import serverResource from "../../../api/resources/server";
+import ServerScopeHeader from "../../components/ServerScopeHeader";
 
-const Saves = ({serverStatus}) => {
+const Saves = () => {
     const { t } = useTranslation();
+    const {serverId} = useParams();
 
     const [saves, setSaves] = useState([]);
+    const [serverStatus, setServerStatus] = useState({running: false});
 
     const updateList = () => {
-        savesResource.list()
+        savesResource.list(false, serverId)
             .then(res => {
                 if (res) {
                     setSaves(res);
@@ -23,11 +28,12 @@ const Saves = ({serverStatus}) => {
     }
 
     useEffect(() => {
-        updateList()
-    }, []);
+        updateList();
+        serverResource.status(serverId).then(setServerStatus);
+    }, [serverId]);
 
     const deleteSave = async (save) => {
-        const res = await savesResource.delete(save);
+        const res = await savesResource.delete(save, serverId);
         if (res) {
             updateList()
         }
@@ -35,6 +41,7 @@ const Saves = ({serverStatus}) => {
 
     return (
         <>
+            <ServerScopeHeader/>
             <div className="lg:flex mb-6">
                 <Panel
                     title={t("saves.create_save")}
@@ -44,13 +51,13 @@ const Saves = ({serverStatus}) => {
                             ? <p className="text-red-light pt-4 pb-24">
                                 {t("saves.create_new_save_only_when_server_not_running")}
                             </p>
-                            : <CreateSaveForm onSuccess={updateList} isFactorioInstalled={!!(serverStatus.fac_version && serverStatus.fac_version !== "0.0.0.0")}/>
+                            : <CreateSaveForm onSuccess={updateList} serverId={serverId}/>
                     }
                 />
                 <Panel
                     title={t("saves.upload_save")}
                     className="lg:w-1/2 lg:ml-3"
-                    content={<UploadSaveForm onSuccess={updateList}/>}
+                    content={<UploadSaveForm onSuccess={updateList} serverId={serverId}/>}
                 />
             </div>
 
@@ -75,7 +82,7 @@ const Saves = ({serverStatus}) => {
                                     <td className="pr-4">{(new Date(save.last_mod)).toLocaleString()}</td>
                                     <td className="pr-4">{parseFloat(save.size / 1024 / 1024).toFixed(3)} MB</td>
                                     <td>
-                                        <a href={`/api/saves/dl/${save.name}`} className="mr-2">
+                                        <a href={savesResource.downloadURL(save.name, serverId)} className="mr-2">
                                             <FontAwesomeIcon
                                                 className="text-gray-light cursor-pointer hover:text-orange"
                                                 icon={faDownload}/>

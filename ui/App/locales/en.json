@@ -22,6 +22,10 @@
     "main_title": "Factorio Server Manager",
     "server_settings": {
         "title": "Server settings",
+        "network_title": "Server network",
+        "bind_ip": "Bind IP",
+        "port_restart_note": "Changing the port while running will require a restart.",
+        "network_save_error": "Error saving server network settings.",
         "admins": "Admins",
         "name": "Name",
         "description": "Description",
@@ -118,6 +122,20 @@
         "downloading": "Downloading... {{current}} MB / {{total}} MB",
         "extracting": "Extracting..."
     },
+    "servers": {
+        "create": "Create server",
+        "pending_restart": "restart pending",
+        "manage": "Manage",
+        "save_now": "Save",
+        "delete": "Delete Server",
+        "confirm_delete": "Confirm delete",
+        "cant_start_no_save": "Create or upload a save before starting this server.",
+        "cant_delete_running": "Stop this server before deleting it.",
+        "editing": "Editing server",
+        "server": "Server",
+        "id": "ID",
+        "running_summary": "{{running}} / {{total}} servers running"
+    },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",
         "install_mod": "Install Mod",
@@ -165,7 +183,9 @@
         "sync_selected": "Download & enable ({{count}})",
         "enable_selected": "Enable ({{count}})",
         "cancel_sync": "Cancel",
-        "calculating": "Calculating..."
+        "calculating": "Calculating...",
+        "mod_options": "Mod Options",
+        "mod_options_raw_note": "Edit the raw base64 encoded mod-settings.dat for this server."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",
@@ -184,6 +204,9 @@
     },
     "logs": {
         "title": "Logs"
+    },
+    "fsm_logs": {
+        "title": "FSM Logs"
     },
     "help": {
         "title": "Help",

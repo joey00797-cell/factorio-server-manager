@@ -13,9 +13,12 @@ import CreateModPack from "./components/CreateModPack";
 import ModPack from "./components/ModPack";
 import ModList from "./components/ModList";
 import { useTranslation } from "react-i18next";
+import {useParams} from "react-router-dom";
+import ServerScopeHeader from "../../components/ServerScopeHeader";
 
-const Mods = ({serverStatus}) => {
+const Mods = () => {
     const { t } = useTranslation();
+    const {serverId} = useParams();
     const [installedMods, setInstalledMods] = useState([]);
     const [modPacks, setModPacks] = useState([])
     const [factorioVersion, setFactorioVersion] = useState(null);
@@ -23,13 +26,14 @@ const Mods = ({serverStatus}) => {
     const [isDeletingAllMods, setIsDeletingAllMods] = useState(false);
     const [isUpdatingAllMods, setIsUpdatingAllMods] = useState(false);
     const [updatableMods, setUpdatableMods] = useState([]);
+    const [serverStatus, setServerStatus] = useState({running: false});
 
     const addUpdatableMod = mod => {
         setUpdatableMods(mods => [...mods, mod])
     };
 
     const fetchInstalledMods = () => {
-        modsResource.installed()
+        modsResource.installed(serverId)
             .then(setInstalledMods);
     };
 
@@ -40,7 +44,7 @@ const Mods = ({serverStatus}) => {
 
     const deleteAllMods = () => {
         setIsDeletingAllMods(true);
-        modsResource.deleteAll()
+        modsResource.deleteAll(serverId)
             .then(fetchInstalledMods)
             .finally(() => setIsDeletingAllMods(false))
     }
@@ -50,7 +54,7 @@ const Mods = ({serverStatus}) => {
 
         let promises = [];
         for (const updatableMod of updatableMods) {
-            promises.push(modsResource.update(updatableMod))
+            promises.push(modsResource.update(updatableMod, serverId))
         }
 
         Promise.all(promises)
@@ -59,8 +63,9 @@ const Mods = ({serverStatus}) => {
     }
 
     useEffect(() => {
-        server.factorioVersion()
+        server.status(serverId)
             .then(data => {
+                setServerStatus(data);
                 setFactorioVersion(data.base_mod_version)
                 fetchInstalledMods();
                 fetchModPacks();
@@ -84,23 +89,23 @@ const Mods = ({serverStatus}) => {
                 }));
             });
 
-    }, []);
+    }, [serverId]);
 
     const toggleMod = modName => {
         return modsResource
-            .toggle(modName)
+            .toggle(modName, serverId)
             .then(fetchInstalledMods)
     }
 
     const deleteMod = modName => {
         return modsResource
-            .delete(modName)
+            .delete(modName, serverId)
             .then(fetchInstalledMods)
     }
 
     const updateMod = version => {
         return modsResource
-            .update(version)
+            .update(version, serverId)
             .then(fetchInstalledMods)
     }
 
@@ -108,6 +113,7 @@ const Mods = ({serverStatus}) => {
 
     return (
         <div>
+            <ServerScopeHeader/>
             {disabled ?
                 <Panel className="mb-6"
                        content={
@@ -119,13 +125,13 @@ const Mods = ({serverStatus}) => {
                 :
                 <TabControl>
                     <Tab title={t("mods.install_mod")}>
-                        <AddMod refetchInstalledMods={fetchInstalledMods} fuse={fuse}/>
+                        <AddMod refetchInstalledMods={fetchInstalledMods} fuse={fuse} serverId={serverId}/>
                     </Tab>
                     <Tab title={t("mods.upload_mod")}>
-                        <UploadMod refetchInstalledMods={fetchInstalledMods}/>
+                        <UploadMod refetchInstalledMods={fetchInstalledMods} serverId={serverId}/>
                     </Tab>
                     <Tab title={t("mods.load_mods")}>
-                        <LoadMods refreshMods={fetchInstalledMods}/>
+                        <LoadMods refreshMods={fetchInstalledMods} serverId={serverId}/>
                     </Tab>
                 </TabControl>
             }
@@ -152,7 +158,7 @@ const Mods = ({serverStatus}) => {
                                     onClick={updateAllMods}>{t("mods.update_all")}</Button>
                         }
                         <a className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold"
-                           href={modsResource.downloadAllURL}>{t("mods.download_all")}</a>
+                           href={modsResource.downloadAllURL(serverId)}>{t("mods.download_all")}</a>
                     </>
                 }
             />

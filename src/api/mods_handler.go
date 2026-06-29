@@ -26,6 +26,23 @@ func CreateNewMods(w http.ResponseWriter) (modList factorio.Mods, resp interface
 	return
 }
 
+func CreateNewModsForRequest(w http.ResponseWriter, r *http.Request) (modList factorio.Mods, resp interface{}, err error) {
+	server, ok := serverFromRequest(r)
+	if !ok {
+		resp = "server not found"
+		w.WriteHeader(http.StatusNotFound)
+		err = fmt.Errorf("server not found")
+		return
+	}
+	modList, err = factorio.NewMods(serverModsDir(server))
+	if err != nil {
+		resp = fmt.Sprintf("Error creating mods object: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	return
+}
+
 func ReadFromRequestBody(w http.ResponseWriter, r *http.Request, data interface{}) (resp interface{}, err error) {
 	//Get Data out of the request
 	body, resp, err := ReadRequestBody(w, r)
@@ -54,7 +71,7 @@ func ListInstalledModsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
-	modList, resp, err := CreateNewMods(w)
+	modList, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -81,7 +98,7 @@ func ModToggleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mods, resp, err := CreateNewMods(w)
+	mods, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -115,7 +132,7 @@ func ModDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modList, resp, err := CreateNewMods(w)
+	modList, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -142,7 +159,13 @@ func ModDeleteAllHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
 	//delete mods folder
-	err = factorio.DeleteAllMods()
+	server, ok := serverFromRequest(r)
+	if !ok {
+		resp = "server not found"
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	err = factorio.ClearModsDir(serverModsDir(server))
 	if err != nil {
 		resp = fmt.Sprintf("Error deleting all mods: %s", err)
 		log.Println(resp)
@@ -175,7 +198,7 @@ func ModUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mods, resp, err := CreateNewMods(w)
+	mods, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -220,7 +243,7 @@ func ModUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer formFile.Close()
 
-	mods, resp, err := CreateNewMods(w)
+	mods, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -236,7 +259,13 @@ func ModUploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if fileHeader.Filename == "mod-settings.dat" || fileHeader.Filename == "mod-list.json" {
-		modsDir := filepath.Join(bootstrap.GetConfig().FactorioModsDir, fileHeader.Filename)
+		server, ok := serverFromRequest(r)
+		if !ok {
+			resp = "server not found"
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		modsDir := filepath.Join(serverModsDir(server), fileHeader.Filename)
 		file, err := os.Create(modsDir)
 		if err != nil {
 			resp = fmt.Sprintf("error creating %s: %s", fileHeader.Filename, err)
@@ -266,9 +295,13 @@ func ModDownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	zipWriter := zip.NewWriter(w)
 	defer zipWriter.Close()
-	config := bootstrap.GetConfig()
+	server, ok := serverFromRequest(r)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	//iterate over folder and create everything in the zip
-	err = filepath.Walk(config.FactorioModsDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(serverModsDir(server), func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() == false {
 			//Lock the file, that we are want to read
 			err := factorio.FileLock.RLock(path)
@@ -341,8 +374,13 @@ func LoadModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config := bootstrap.GetConfig()
-	path := filepath.Join(config.FactorioSavesDir, saveFileStruct.Name)
+	server, ok := serverFromRequest(r)
+	if !ok {
+		resp = "server not found"
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	path := filepath.Join(serverSavesDir(server), saveFileStruct.Name)
 
 	f, err := factorio.OpenArchiveFile(path, "level.dat", "level-init.dat")
 	if err != nil {
@@ -386,14 +424,20 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if factorio.IsModsSyncing() {
+	server, ok := serverFromRequest(r)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		resp = "server not found"
+		return
+	}
+
+	if factorio.IsModsSyncingForServer(server.ID) {
 		w.WriteHeader(http.StatusConflict)
 		resp = "mod sync already in progress"
 		return
 	}
 
-	config := bootstrap.GetConfig()
-	savePath := filepath.Join(config.FactorioSavesDir, syncRequest.Name)
+	savePath := filepath.Join(serverSavesDir(server), syncRequest.Name)
 
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -401,7 +445,7 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go factorio.SyncModsFromSave(savePath, syncRequest.ModNames)
+	go factorio.SyncModsFromSaveForDir(savePath, serverModsDir(server), server.ID, syncRequest.ModNames)
 	resp = map[string]string{"status": "started"}
 }
 
@@ -419,8 +463,13 @@ func GetModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config := bootstrap.GetConfig()
-	savePath := filepath.Join(config.FactorioSavesDir, saveFileStruct.Name)
+	server, ok := serverFromRequest(r)
+	if !ok {
+		resp = "server not found"
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	savePath := filepath.Join(serverSavesDir(server), saveFileStruct.Name)
 
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -428,7 +477,7 @@ func GetModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mods, err := factorio.GetModsFromSave(savePath)
+	mods, err := factorio.GetModsFromSaveForDir(savePath, serverModsDir(server))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = fmt.Sprintf("error reading mods from save: %s", err)

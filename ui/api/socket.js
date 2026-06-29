@@ -7,28 +7,28 @@ const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 function connect() {
     const socket = new WebSocket(ws_scheme + "://" + window.location.host + "/ws");
 
-    function logSubscribeEvent() {
+    function logSubscribeEvent(serverId) {
         socket.send(
             JSON.stringify(
                 {
                     room_name: "",
                     controls: {
                         type: "subscribe",
-                        value: "gamelog"
+                        value: serverId ? `servers:${serverId}:gamelog` : "gamelog"
                     }
                 }
             )
         );
     }
 
-    function logUnsubscribeEvent() {
+    function logUnsubscribeEvent(serverId) {
         socket.send(
             JSON.stringify(
                 {
                     room_name: "",
                     controls: {
                         type: "unsubscribe",
-                        value: "gamelog"
+                        value: serverId ? `servers:${serverId}:gamelog` : "gamelog"
                     }
                 }
             )
@@ -53,26 +53,34 @@ function connect() {
         );
     }
 
-    function commandSendEvent(command) {
+    function serversSubscribeEvent() {
+        socket.send(JSON.stringify({room_name: "", controls: {type: "subscribe", value: "servers"}}));
+    }
+
+    function serversUnsubscribeEvent() {
+        socket.send(JSON.stringify({room_name: "", controls: {type: "unsubscribe", value: "servers"}}));
+    }
+
+    function commandSendEvent(command, serverId) {
         socket.send(
             JSON.stringify(
                 {
                     room_name: "",
                     controls: {
                         type: "command",
-                        value: command
+                        value: serverId ? JSON.stringify({serverId, command}) : command
                     }
                 }
             )
         );
     }
 
-    function modsSyncSubscribeEvent() {
-        socket.send(JSON.stringify({room_name: "", controls: {type: "subscribe", value: "mods_sync"}}));
+    function modsSyncSubscribeEvent(serverId) {
+        socket.send(JSON.stringify({room_name: "", controls: {type: "subscribe", value: serverId ? `servers:${serverId}:mods_sync` : "mods_sync"}}));
     }
 
-    function modsSyncUnsubscribeEvent() {
-        socket.send(JSON.stringify({room_name: "", controls: {type: "unsubscribe", value: "mods_sync"}}));
+    function modsSyncUnsubscribeEvent(serverId) {
+        socket.send(JSON.stringify({room_name: "", controls: {type: "unsubscribe", value: serverId ? `servers:${serverId}:mods_sync` : "mods_sync"}}));
     }
 
     function registerEventEmitter() {
@@ -80,6 +88,8 @@ function connect() {
         bus.on('log unsubscribe', logUnsubscribeEvent);
         bus.on('server status subscribe', serverStatusSubscribeEvent);
         bus.on('server version subscribe', serverVersionSubscribeEvent);
+        bus.on('servers subscribe', serversSubscribeEvent);
+        bus.on('servers unsubscribe', serversUnsubscribeEvent);
         bus.on('command send', commandSendEvent);
         bus.on('mods sync subscribe', modsSyncSubscribeEvent);
         bus.on('mods sync unsubscribe', modsSyncUnsubscribeEvent);
@@ -90,6 +100,8 @@ function connect() {
         bus.off('log unsubscribe', logUnsubscribeEvent);
         bus.off('server status subscribe', serverStatusSubscribeEvent);
         bus.off('server version subscribe', serverVersionSubscribeEvent);
+        bus.off('servers subscribe', serversSubscribeEvent);
+        bus.off('servers unsubscribe', serversUnsubscribeEvent);
         bus.off('command send', commandSendEvent);
         bus.off('mods sync subscribe', modsSyncSubscribeEvent);
         bus.off('mods sync unsubscribe', modsSyncUnsubscribeEvent);

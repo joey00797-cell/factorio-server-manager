@@ -5,7 +5,7 @@ ENV FACTORIO_VERSION=stable \
     MANAGER_VERSION=0.10.1 \
     RCON_PASS=""
 
-VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
+VOLUME /opt/fsm-data /opt/factorio-server
 
 EXPOSE 80/tcp 34197/udp
 
@@ -21,5 +21,6 @@ RUN curl --location "https://github.com/OpenFactorioServerManager/factorio-serve
     && mv factorio-server-manager fsm
 
 COPY ./entrypoint.sh /opt/entrypoint.sh
+RUN sed -i 's/\r$//' /opt/entrypoint.sh && chmod u+x /opt/entrypoint.sh
 
 ENTRYPOINT ["/opt/entrypoint.sh"]

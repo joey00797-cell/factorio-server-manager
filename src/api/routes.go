@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
-	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -21,7 +20,11 @@ type Routes []Route
 func ServerOffMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// only run if server is turned off
-		server := factorio.GetFactorioServer()
+		server, ok := serverFromRequest(r)
+		if !ok {
+			http.Error(w, "server not found", http.StatusNotFound)
+			return
+		}
 		if server.GetRunning() {
 			http.Error(w, "factorio server still running", http.StatusLocked)
 		} else {
@@ -37,6 +40,19 @@ func NewRouter() *mux.Router {
 	// create subrouter for authenticated calls
 	subRouter := mainRouter.NewRoute().Subrouter()
 	subRouter.Use(AuthMiddleware)
+
+	mainRouter.Path("/api/locales/list").
+		Methods("GET").
+		Name("PublicLocalesList").
+		HandlerFunc(LocalesListHandler)
+	mainRouter.Path("/api/locales/template").
+		Methods("GET").
+		Name("PublicLocalesTemplate").
+		HandlerFunc(LocalesTemplateHandler)
+	mainRouter.Path("/api/locales/{lang}").
+		Methods("GET").
+		Name("PublicLocalesGet").
+		HandlerFunc(LocalesGetHandler)
 
 	// API subrouter
 	// Serves all JSON REST handlers prefixed with /api
@@ -114,6 +130,10 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Name("Logs").
 		Handler(http.StripPrefix("/logs", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/fsm-logs").
+		Methods("GET").
+		Name("FSM Logs").
+		Handler(http.StripPrefix("/fsm-logs", http.FileServer(http.Dir("./app/"))))
 	subRouter.Path("/user-management").
 		Methods("GET").
 		Name("User management").
@@ -122,6 +142,12 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Name("Help").
 		Handler(http.StripPrefix("/help", http.FileServer(http.Dir("./app/"))))
+	subRouter.PathPrefix("/servers").
+		Methods("GET").
+		Name("Servers").
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 
 	// catch all route
 	mainRouter.PathPrefix("/").
@@ -135,6 +161,211 @@ func NewRouter() *mux.Router {
 // Defines all API REST endpoints
 // All routes are prefixed with /api
 var apiRoutes = Routes{
+	{
+		"ListServers",
+		"GET",
+		"/servers",
+		ListServersHandler,
+		false,
+	}, {
+		"CreateServer",
+		"POST",
+		"/servers",
+		CreateServerHandler,
+		false,
+	}, {
+		"GetServer",
+		"GET",
+		"/servers/{serverID}",
+		GetServerHandler,
+		false,
+	}, {
+		"UpdateServer",
+		"PATCH",
+		"/servers/{serverID}",
+		UpdateServerHandler,
+		false,
+	}, {
+		"DeleteServer",
+		"DELETE",
+		"/servers/{serverID}",
+		DeleteServerHandler,
+		false,
+	}, {
+		"ScopedServerStatus",
+		"GET",
+		"/servers/{serverID}/status",
+		GetServerHandler,
+		false,
+	}, {
+		"ScopedFactorioVersion",
+		"GET",
+		"/servers/{serverID}/facVersion",
+		FactorioVersion,
+		false,
+	}, {
+		"ScopedStartServer",
+		"POST",
+		"/servers/{serverID}/start",
+		StartServer,
+		true,
+	}, {
+		"ScopedStopServer",
+		"POST",
+		"/servers/{serverID}/stop",
+		StopServer,
+		false,
+	}, {
+		"ScopedKillServer",
+		"POST",
+		"/servers/{serverID}/kill",
+		KillServer,
+		false,
+	}, {
+		"ScopedSaveServer",
+		"POST",
+		"/servers/{serverID}/save",
+		SaveServerHandler,
+		false,
+	}, {
+		"ScopedListSaves",
+		"GET",
+		"/servers/{serverID}/saves/list",
+		ListSaves,
+		false,
+	}, {
+		"ScopedDlSave",
+		"GET",
+		"/servers/{serverID}/saves/dl/{save}",
+		DLSave,
+		false,
+	}, {
+		"ScopedUploadSave",
+		"POST",
+		"/servers/{serverID}/saves/upload",
+		UploadSave,
+		false,
+	}, {
+		"ScopedRemoveSave",
+		"GET",
+		"/servers/{serverID}/saves/rm/{save}",
+		RemoveSave,
+		false,
+	}, {
+		"ScopedCreateSave",
+		"GET",
+		"/servers/{serverID}/saves/create/{save}",
+		CreateSaveHandler,
+		true,
+	}, {
+		"ScopedLogTail",
+		"GET",
+		"/servers/{serverID}/log/tail",
+		LogTail,
+		false,
+	}, {
+		"ScopedLoadConfig",
+		"GET",
+		"/servers/{serverID}/config",
+		LoadConfig,
+		false,
+	}, {
+		"ScopedUpdateConfig",
+		"POST",
+		"/servers/{serverID}/config/update",
+		UpdateConfig,
+		false,
+	}, {
+		"ScopedGetServerSettings",
+		"GET",
+		"/servers/{serverID}/settings",
+		GetServerSettings,
+		false,
+	}, {
+		"ScopedUpdateServerSettings",
+		"POST",
+		"/servers/{serverID}/settings/update",
+		UpdateServerSettings,
+		false,
+	}, {
+		"ScopedListInstalledMods",
+		"GET",
+		"/servers/{serverID}/mods/list",
+		ListInstalledModsHandler,
+		false,
+	}, {
+		"ScopedToggleMod",
+		"POST",
+		"/servers/{serverID}/mods/toggle",
+		ModToggleHandler,
+		true,
+	}, {
+		"ScopedDeleteMod",
+		"POST",
+		"/servers/{serverID}/mods/delete",
+		ModDeleteHandler,
+		true,
+	}, {
+		"ScopedDeleteAllMods",
+		"POST",
+		"/servers/{serverID}/mods/delete/all",
+		ModDeleteAllHandler,
+		true,
+	}, {
+		"ScopedUpdateMod",
+		"POST",
+		"/servers/{serverID}/mods/update",
+		ModUpdateHandler,
+		true,
+	}, {
+		"ScopedUploadMod",
+		"POST",
+		"/servers/{serverID}/mods/upload",
+		ModUploadHandler,
+		true,
+	}, {
+		"ScopedDownloadMods",
+		"GET",
+		"/servers/{serverID}/mods/download",
+		ModDownloadHandler,
+		false,
+	}, {
+		"ScopedModPortalInstallMod",
+		"POST",
+		"/servers/{serverID}/mods/portal/install",
+		ModPortalInstallHandler,
+		true,
+	}, {
+		"ScopedModPortalInstallMultiple",
+		"POST",
+		"/servers/{serverID}/mods/portal/install/multiple",
+		ModPortalInstallMultipleHandler,
+		true,
+	}, {
+		"ScopedGetModsFromSave",
+		"POST",
+		"/servers/{serverID}/saves/mods/list",
+		GetModsFromSaveHandler,
+		true,
+	}, {
+		"ScopedSyncModsFromSave",
+		"POST",
+		"/servers/{serverID}/saves/mods/sync",
+		SyncModsFromSaveHandler,
+		true,
+	}, {
+		"ScopedModSettings",
+		"GET",
+		"/servers/{serverID}/mod-settings",
+		GetModSettingsHandler,
+		false,
+	}, {
+		"ScopedUpdateModSettings",
+		"POST",
+		"/servers/{serverID}/mod-settings",
+		UpdateModSettingsHandler,
+		false,
+	},
 	{
 		"ListSaves",
 		"GET",
@@ -196,10 +427,22 @@ var apiRoutes = Routes{
 		LogTail,
 		false,
 	}, {
+		"FSMLogTail",
+		"GET",
+		"/fsm/log/tail",
+		FSMLogTail,
+		false,
+	}, {
 		"LoadConfig",
 		"GET",
 		"/config",
 		LoadConfig,
+		false,
+	}, {
+		"UpdateConfig",
+		"POST",
+		"/config/update",
+		UpdateConfig,
 		false,
 	}, {
 		"StartServer",
@@ -236,6 +479,18 @@ var apiRoutes = Routes{
 		"GET",
 		"/server/availableVersions",
 		AvailableVersions,
+		false,
+	}, {
+		"AvailableVersionsScoped",
+		"GET",
+		"/versions",
+		AvailableVersions,
+		false,
+	}, {
+		"InstallVersion",
+		"POST",
+		"/versions/install",
+		InstallFactorio,
 		false,
 	}, {
 		"InstallFactorio",

@@ -77,7 +77,7 @@ func ModPortalInstallHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mods, resp, err := CreateNewMods(w)
+	mods, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -180,7 +180,7 @@ func ModPortalInstallMultipleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modList, resp, err := CreateNewMods(w)
+	modList, resp, err := CreateNewModsForRequest(w, r)
 	if err != nil {
 		return
 	}

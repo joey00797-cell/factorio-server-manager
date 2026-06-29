@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 	"github.com/glebarez/sqlite"
@@ -72,7 +74,7 @@ func SetupAuth() {
 
 		log.Println("Created default admin user. Please change it's password as soon as possible.")
 		log.Printf("Username: %s", user.Username)
-		log.Printf("Password: %s", password)
+		fmt.Fprintf(os.Stderr, "[FSM] Default admin password: %s\n", password)
 	}
 }
 

@@ -1,34 +1,90 @@
 import React, {useEffect, useState} from "react";
-import {NavLink, Outlet} from "react-router-dom";
+import {NavLink, Outlet, useParams} from "react-router-dom";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars} from "@fortawesome/free-solid-svg-icons";
 import {Flash} from "./Flash";
 import ChangeLangDialog from "./ChangeLangDialog";
 import { useTranslation } from "react-i18next";
+import serverApi from "../../api/resources/server";
+import socket from "../../api/socket";
 
-const Layout = ({handleLogout, serverStatus}) => {
+const SERVER_REFRESH_INTERVAL_MS = 10000;
+
+const Layout = ({handleLogout}) => {
 
     const { t, i18n } = useTranslation();
+    const {serverId} = useParams();
+    const serverPrefix = serverId ? `/servers/${serverId}` : "";
 
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
     const [isChangingLang, setIsChangingLang] = useState(false);
+    const [servers, setServers] = useState([]);
 
-    const Status = ({info}) => {
+    useEffect(() => {
+        let cancelled = false;
 
-        let text = t("controls.unknown");
+        const refreshServers = async () => {
+            try {
+                const response = await serverApi.list();
+                if (!cancelled) {
+                    setServers(response || []);
+                }
+            } catch (err) {
+                console.error("Error loading server summary", err);
+            }
+        };
+
+        const handleServerUpdate = message => {
+            try {
+                const updatedServer = typeof message === "string" ? JSON.parse(message) : message;
+                if (!updatedServer || !updatedServer.id) {
+                    refreshServers();
+                    return;
+                }
+                setServers(previous => {
+                    const index = previous.findIndex(server => server.id === updatedServer.id);
+                    if (index === -1) {
+                        return [...previous, updatedServer];
+                    }
+                    return previous.map(server => server.id === updatedServer.id ? {...server, ...updatedServer} : server);
+                });
+            } catch (err) {
+                console.error("Error handling server status update", err);
+            }
+        };
+
+        refreshServers();
+        socket.emit('servers subscribe');
+        socket.on('servers', handleServerUpdate);
+        const interval = setInterval(refreshServers, SERVER_REFRESH_INTERVAL_MS);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+            socket.off('servers', handleServerUpdate);
+            socket.emit('servers unsubscribe');
+        };
+    }, []);
+
+    const FleetStatus = () => {
+        const runningCount = servers.filter(server => server.running).length;
+        const totalCount = servers.length;
         let color = 'gray-light';
 
-        if (info && info.running) {
-            text = t("controls.running");
+        if (runningCount > 0) {
             color = 'green';
-        } else if (info && !info.running) {
-            text = t("controls.stopped");
+        } else if (totalCount > 0) {
             color = 'red';
         }
 
         return (
-            <div className={`bg-${color} accentuated rounded px-2 py-1 text-black`}>{text}</div>
+            <div className={`bg-${color} accentuated rounded px-2 py-1 text-black`}>
+                {t("servers.running_summary", "{{running}} / {{total}} servers running", {
+                    running: runningCount,
+                    total: totalCount
+                })}
+            </div>
         )
     }
 
@@ -66,19 +122,20 @@ const Layout = ({handleLogout, serverStatus}) => {
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">{t("server_status")}</h1>
                         <div className="mx-4 mb-4 text-center">
-                            <Status info={serverStatus}/>
+                            <FleetStatus/>
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">{t("server_management")}</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
                             <Link to="/">{t("controls.title")}</Link>
-                            <Link to="/saves">{t("saves.title")}</Link>
-                            <Link to="/mods">{t("mods.title")}</Link>
-                            <Link to="/server-settings">{t("server_settings.title")}</Link>
-                            <Link to="/game-settings">{t("game_settings.title")}</Link>
-                            <Link to="/console">{t("console.title")}</Link>
-                            <Link to="/logs" last={true}>{t("logs.title")}</Link>
+                            <Link to={`${serverPrefix}/saves`}>{t("saves.title")}</Link>
+                            <Link to={`${serverPrefix}/mods`}>{t("mods.title")}</Link>
+                            <Link to={`${serverPrefix}/server-settings`}>{t("server_settings.title")}</Link>
+                            <Link to={`${serverPrefix}/game-settings`}>{t("game_settings.title")}</Link>
+                            <Link to={`${serverPrefix}/mod-options`}>{t("mods.mod_options", "Mod Options")}</Link>
+                            <Link to={`${serverPrefix}/console`}>{t("console.title")}</Link>
+                            <Link to={`${serverPrefix}/logs`} last={true}>{t("logs.title")}</Link>
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">
@@ -86,6 +143,7 @@ const Layout = ({handleLogout, serverStatus}) => {
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
                             <Link to="/user-management">{t("users.title")}</Link>
                             <Button className="w-full mb-1" onClick={() => setIsChangingLang(true)}>{t("lang")}</Button>
+                            <Link to="/fsm-logs">{t("fsm_logs.title", "FSM Logs")}</Link>
                             <Link to="/help" last={true}>{t("help.title")}</Link>
                             <ChangeLangDialog
                                 isOpen={isChangingLang}

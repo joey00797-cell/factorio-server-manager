@@ -1,28 +1,60 @@
 package factorio
 
 import (
+	"bytes"
+	"compress/flate"
+	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"bytes"
-	"compress/flate"
-	"compress/zlib"
 	"net/http"
 	"context"
 	"sync"
-	"sync/atomic"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
-	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 )
 
-var modsSyncing atomic.Bool
+var modsSyncing = struct {
+	sync.Mutex
+	servers map[string]bool
+}{servers: make(map[string]bool)}
 var syncCancelMu sync.Mutex
 var syncCancelFn context.CancelFunc
 
 func IsModsSyncing() bool {
-	return modsSyncing.Load()
+	return IsModsSyncingForServer(DefaultServerID)
+}
+
+func IsModsSyncingForServer(serverID string) bool {
+	if serverID == "" {
+		serverID = DefaultServerID
+	}
+	modsSyncing.Lock()
+	defer modsSyncing.Unlock()
+	return modsSyncing.servers[serverID]
+}
+
+func beginModsSync(serverID string) bool {
+	if serverID == "" {
+		serverID = DefaultServerID
+	}
+	modsSyncing.Lock()
+	defer modsSyncing.Unlock()
+	if modsSyncing.servers[serverID] {
+		return false
+	}
+	modsSyncing.servers[serverID] = true
+	return true
+}
+
+func endModsSync(serverID string) {
+	if serverID == "" {
+		serverID = DefaultServerID
+	}
+	modsSyncing.Lock()
+	defer modsSyncing.Unlock()
+	delete(modsSyncing.servers, serverID)
 }
 
 func CancelSync() {
@@ -41,16 +73,16 @@ type ModSyncResult struct {
 }
 
 type ModSyncProgress struct {
-	Type         string        `json:"type"`
-	Status       string        `json:"status"`
-	Current      int           `json:"current,omitempty"`
-	Total        int           `json:"total,omitempty"`
-	Mod          string        `json:"mod,omitempty"`
-	Message      string        `json:"message,omitempty"`
-	Warning      string        `json:"warning,omitempty"`
+	Type         string          `json:"type"`
+	Status       string          `json:"status"`
+	Current      int             `json:"current,omitempty"`
+	Total        int             `json:"total,omitempty"`
+	Mod          string          `json:"mod,omitempty"`
+	Message      string          `json:"message,omitempty"`
+	Warning      string          `json:"warning,omitempty"`
 	Mods         []ModSyncResult `json:"mods,omitempty"`
-	CurrentBytes int64         `json:"current_bytes,omitempty"`
-	TotalBytes   int64         `json:"total_bytes,omitempty"`
+	CurrentBytes int64           `json:"current_bytes,omitempty"`
+	TotalBytes   int64           `json:"total_bytes,omitempty"`
 }
 
 // baseModNames — моды которые есть в любом vanilla + DLC сейве
@@ -72,10 +104,18 @@ func isVanillaSave(mods []Mod) bool {
 }
 
 func sendSyncProgress(p ModSyncProgress) {
+	sendSyncProgressForServer(DefaultServerID, p)
+}
+
+func sendSyncProgressForServer(serverID string, p ModSyncProgress) {
 	p.Type = "mods_sync"
 	data, _ := json.Marshal(p)
-	room := websocket.WebsocketHub.GetRoom("mods_sync")
-	room.Send(string(data))
+	if serverID == "" || serverID == DefaultServerID {
+		websocket.WebsocketHub.GetRoom("mods_sync").Send(string(data))
+	}
+	if serverID != "" {
+		websocket.WebsocketHub.GetRoom("servers:" + serverID + ":mods_sync").Send(string(data))
+	}
 }
 
 type portalModRelease struct {
@@ -133,19 +173,23 @@ func readModsFromLevelDat(savePath string) ([]LevelDatMod, error) {
 	}
 
 	pos := 0x2c
-	n := int(data[pos]); pos++
+	n := int(data[pos])
+	pos++
 
 	var mods []LevelDatMod
 	for i := 0; i < n; i++ {
 		if pos >= len(data) {
 			break
 		}
-		nameLen := int(data[pos]); pos++
+		nameLen := int(data[pos])
+		pos++
 		if pos+nameLen+7 > len(data) {
 			break
 		}
-		name := string(data[pos : pos+nameLen]); pos += nameLen
-		v0, v1, v2 := uint(data[pos]), uint(data[pos+1]), uint(data[pos+2]); pos += 3
+		name := string(data[pos : pos+nameLen])
+		pos += nameLen
+		v0, v1, v2 := uint(data[pos]), uint(data[pos+1]), uint(data[pos+2])
+		pos += 3
 		pos += 4 // CRC
 		mods = append(mods, LevelDatMod{
 			Name:    name,
@@ -232,26 +276,35 @@ func getModRelease(modName string, version string) (portalModRelease, error) {
 // качает только недостающие. Прогресс через WebSocket room "mods_sync".
 // Пока идёт синк — IsModsSyncing() возвращает true, сервер не стартует.
 func SyncModsFromSave(savePath string, modNames []string) {
-	if !modsSyncing.CompareAndSwap(false, true) {
-		log.Println("SyncModsFromSave: already syncing, skipping")
-		sendSyncProgress(ModSyncProgress{Status: "error", Message: "sync already in progress"})
+	modsDir := ""
+	if manager := GetServerManager(); manager != nil {
+		modsDir = manager.DefaultServer().modsDir()
+	}
+	if modsDir == "" {
 		return
 	}
-	defer modsSyncing.Store(false)
+	SyncModsFromSaveForDir(savePath, modsDir, DefaultServerID, modNames)
+}
 
-	config := bootstrap.GetConfig()
+func SyncModsFromSaveForDir(savePath string, modsDir string, serverID string, modNames []string) {
+	if !beginModsSync(serverID) {
+		log.Println("SyncModsFromSave: already syncing, skipping")
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: "sync already in progress"})
+		return
+	}
+	defer endModsSync(serverID)
 
 	// 1. Читаем список модов из сейва
 	f, err := OpenArchiveFile(savePath, "level.dat", "level-init.dat")
 	if err != nil {
-		sendSyncProgress(ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot open save: %v", err)})
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot open save: %v", err)})
 		return
 	}
 	defer f.Close()
 
 	var header SaveHeader
 	if err := header.ReadFrom(f); err != nil {
-		sendSyncProgress(ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot read save header: %v", err)})
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot read save header: %v", err)})
 		return
 	}
 
@@ -267,7 +320,7 @@ func SyncModsFromSave(savePath string, modNames []string) {
 		log.Printf("SyncModsFromSave: loaded %d mods from level.dat0", len(header.Mods))
 	}
 
-		// 1.6. Проверяем тип сейва
+	// 1.6. Проверяем тип сейва
 	var vanillaWarning string
 	if isVanillaSave(header.Mods) {
 		vanillaWarning = "Сейв создан без геймплейных модов. Моды могли быть добавлены позже — синхронизация может быть неполной."
@@ -275,9 +328,9 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	}
 
 	// 2. Читаем установленные моды
-	mods, err := NewMods(config.FactorioModsDir)
+	mods, err := NewMods(modsDir)
 	if err != nil {
-		sendSyncProgress(ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot read installed mods: %v", err)})
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot read installed mods: %v", err)})
 		return
 	}
 
@@ -318,7 +371,7 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	log.Printf("SyncModsFromSave: %d mods to download", total)
 
 	if total == 0 {
-		sendSyncProgress(ModSyncProgress{Status: "done", Total: 0, Mods: results, Warning: vanillaWarning})
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "done", Total: 0, Mods: results, Warning: vanillaWarning})
 		return
 	}
 
@@ -343,7 +396,7 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	for i, saveMod := range toDownload {
 		wantVersion := normalizeVersion(saveMod.Version)
 
-		sendSyncProgress(ModSyncProgress{
+		sendSyncProgressForServer(serverID, ModSyncProgress{
 			Status:       "progress",
 			Current:      i + 1,
 			Total:        total,
@@ -371,9 +424,9 @@ func SyncModsFromSave(savePath string, modNames []string) {
 			continue
 		}
 
-		mods, err = NewMods(config.FactorioModsDir)
+		mods, err = NewMods(modsDir)
 		if err != nil {
-			sendSyncProgress(ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot refresh mods: %v", err)})
+			sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot refresh mods: %v", err)})
 			return
 		}
 
@@ -401,7 +454,7 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	}
 
 	// Обновляем mod-list.json — включаем нужные, выключаем лишние
-	finalMods, err := NewMods(config.FactorioModsDir)
+	finalMods, err := NewMods(modsDir)
 	if err == nil {
 		// Строим set модов из сейва
 		saveModSet := make(map[string]bool)
@@ -426,22 +479,31 @@ func SyncModsFromSave(savePath string, modNames []string) {
 		}
 	}
 
-	sendSyncProgress(ModSyncProgress{Status: "done", Total: total, Mods: results, Warning: vanillaWarning})
+	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "done", Total: total, Mods: results, Warning: vanillaWarning})
 }
 
 // ModStatus — статус мода при сравнении сейва с установленными
 type ModStatus struct {
-	Name            string `json:"name"`
-	VersionRequired string `json:"version_required"` // версия в сейве
+	Name             string `json:"name"`
+	VersionRequired  string `json:"version_required"`  // версия в сейве
 	VersionInstalled string `json:"version_installed"` // версия установленная (если есть)
-	Status          string `json:"status"` // missing, installed, wrong_version, builtin
-	PortalURL       string `json:"portal_url"`
+	Status           string `json:"status"`            // missing, installed, wrong_version, builtin
+	PortalURL        string `json:"portal_url"`
 }
 
 // GetModsFromSave читает моды из сейва и сравнивает с установленными
 func GetModsFromSave(savePath string) ([]ModStatus, error) {
-	config := bootstrap.GetConfig()
+	modsDir := ""
+	if manager := GetServerManager(); manager != nil {
+		modsDir = manager.DefaultServer().modsDir()
+	}
+	if modsDir == "" {
+		return nil, fmt.Errorf("mods directory not configured")
+	}
+	return GetModsFromSaveForDir(savePath, modsDir)
+}
 
+func GetModsFromSaveForDir(savePath string, modsDir string) ([]ModStatus, error) {
 	// Читаем моды из level.dat0
 	levelMods, err := readModsFromLevelDat(savePath)
 	if err != nil {
@@ -449,7 +511,7 @@ func GetModsFromSave(savePath string) ([]ModStatus, error) {
 	}
 
 	// Читаем установленные моды
-	mods, err := NewMods(config.FactorioModsDir)
+	mods, err := NewMods(modsDir)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read installed mods: %v", err)
 	}

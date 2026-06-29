@@ -23,10 +23,18 @@ import (
 
 type Server struct {
 	Cmd            *exec.Cmd              `json:"-"`
+	ID             string                 `json:"id"`
+	Name           string                 `json:"name"`
+	VersionLabel   string                 `json:"version"`
 	Savefile       string                 `json:"savefile"`
 	Latency        int                    `json:"latency"`
 	BindIP         string                 `json:"bindip"`
 	Port           int                    `json:"port"`
+	RconPort       int                    `json:"rcon_port"`
+	RconPass       string                 `json:"-"`
+	Autostart      bool                   `json:"autostart"`
+	PendingRestart bool                   `json:"pending_restart"`
+	Paths          InstancePaths          `json:"paths"`
 	Running        bool                   `json:"running"`
 	Version        Version                `json:"fac_version"`
 	BaseModVersion string                 `json:"base_mod_version"`
@@ -45,9 +53,12 @@ func (server *Server) SetRunning(newState bool) {
 	if server.Running != newState {
 		log.Println("new state, will also send to correct room")
 		server.Running = newState
-		wsRoom := websocket.WebsocketHub.GetRoom("server_status")
 		response, _ := json.Marshal(server)
-		wsRoom.Send(string(response))
+		websocket.WebsocketHub.GetRoom("server_status").Send(string(response))
+		websocket.WebsocketHub.GetRoom("servers").Send(string(response))
+		if server.ID != "" {
+			websocket.WebsocketHub.GetRoom("servers:" + server.ID + ":status").Send(string(response))
+		}
 	}
 }
 
@@ -217,22 +228,37 @@ func GetFactorioServer() (f *Server) {
 
 func (server *Server) Run() error {
 	var err error
+	if manager := GetServerManager(); manager != nil {
+		if err := manager.EnsureServerVersion(server); err != nil {
+			return err
+		}
+	}
 	config := bootstrap.GetConfig()
+	settingsFile := server.settingsFile()
+	binary := server.factorioBinary()
+	adminFile := server.adminFile()
+	savesDir := server.savesDir()
+	consoleLogFile := server.consoleLogFile()
+	configFile := server.configFile()
+	modsDir := server.modsDir()
+	rconPort := server.rconPort()
+	rconPass := server.rconPass()
+
 	log.Printf("DEBUG Run(): starting, Savefile=%s BindIP=%s Port=%d", server.Savefile, server.BindIP, server.Port)
 	log.Printf("DEBUG Run(): Settings keys count=%d", len(server.Settings))
-	log.Printf("DEBUG Run(): SettingsFile=%s", config.SettingsFile)
-	log.Printf("DEBUG Run(): FactorioBinary=%s", config.FactorioBinary)
+	log.Printf("DEBUG Run(): SettingsFile=%s", settingsFile)
+	log.Printf("DEBUG Run(): FactorioBinary=%s", binary)
 	data, err := json.MarshalIndent(server.Settings, "", "  ")
 	if err != nil {
 		log.Println("Failed to marshal FactorioServerSettings: ", err)
 	} else if len(server.Settings) < 5 {
 		log.Printf("WARNING: server.Settings has only %d keys, skipping write to prevent corruption", len(server.Settings))
 	} else {
-		log.Printf("DEBUG Run(): writing %d settings keys to %s", len(server.Settings), config.SettingsFile)
-		ioutil.WriteFile(config.SettingsFile, data, 0644)
+		log.Printf("DEBUG Run(): writing %d settings keys to %s", len(server.Settings), settingsFile)
+		ioutil.WriteFile(settingsFile, data, 0644)
 	}
 
-	saves, err := ListSaves()
+	saves, err := ListSavesInDir(savesDir)
 	if err != nil {
 		log.Println("Failed to get saves list: ", err)
 	}
@@ -247,37 +273,41 @@ func (server *Server) Run() error {
 	//the game would use the path to the ld.so file as it's executable path and crash, to prevent this the parameter "--executable-path" is added
 	if config.GlibcCustom == "true" {
 		log.Println("Custom glibc selected, glibc.so location:", config.GlibcLocation, " lib location:", config.GlibcLibLoc)
-		args = append(args, "--library-path", config.GlibcLibLoc, config.FactorioBinary, "--executable-path", config.FactorioBinary)
+		args = append(args, "--library-path", config.GlibcLibLoc, binary, "--executable-path", binary)
 	}
 
 	args = append(args,
+		"--config", configFile,
+		"--mod-directory", modsDir,
 		"--bind", server.BindIP,
 		"--port", strconv.Itoa(server.Port),
-		"--server-settings", config.SettingsFile,
-		"--rcon-port", strconv.Itoa(config.FactorioRconPort),
-		"--rcon-password", config.FactorioRconPass)
+		"--server-settings", settingsFile,
+		"--rcon-port", strconv.Itoa(rconPort),
+		"--rcon-password", rconPass)
 
 	if (server.Version.Greater(Version{0, 17, 0})) {
-		args = append(args, "--server-adminlist", config.FactorioAdminFile)
+		args = append(args, "--server-adminlist", adminFile)
 	}
 
 	if strings.HasPrefix(server.Savefile, "Load Latest") {
 		args = append(args, "--start-server-load-latest")
 	} else {
-		args = append(args, "--start-server", filepath.Join(config.FactorioSavesDir, server.Savefile))
+		args = append(args, "--start-server", filepath.Join(savesDir, server.Savefile))
 	}
 
 	// Write chat log to a different file if requested (if not it will be mixed-in with the default logfile)
 	if config.ChatLogFile != "" {
 		args = append(args, "--console-log", config.ChatLogFile)
+	} else if consoleLogFile != "" {
+		args = append(args, "--console-log", consoleLogFile)
 	}
 
 	if config.GlibcCustom == "true" {
-		log.Println("Starting server with command: ", config.GlibcLocation, args)
+		log.Println("Starting server with command: ", config.GlibcLocation, redactedServerArgs(args))
 		server.Cmd = exec.Command(config.GlibcLocation, args...)
 	} else {
-		log.Println("Starting server with command: ", config.FactorioBinary, args)
-		server.Cmd = exec.Command(config.FactorioBinary, args...)
+		log.Println("Starting server with command: ", binary, redactedServerArgs(args))
+		server.Cmd = exec.Command(binary, args...)
 	}
 
 	server.StdOut, err = server.Cmd.StdoutPipe()
@@ -302,9 +332,9 @@ func (server *Server) Run() error {
 	go server.parseRunningCommand(server.StdErr)
 
 	// Ждём завершения синка модов если он идёт
-	if IsModsSyncing() {
+	if IsModsSyncingForServer(server.ID) {
 		log.Println("Waiting for mod sync to complete before starting server...")
-		for IsModsSyncing() {
+		for IsModsSyncingForServer(server.ID) {
 			time.Sleep(1 * time.Second)
 		}
 		log.Println("Mod sync complete, starting server")
@@ -333,20 +363,24 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 	for stdScanner.Scan() {
 		text := stdScanner.Text()
 
-		log.Printf("%s", text)
 		if err := server.writeLog(text); err != nil {
 			log.Printf("Error: %s", err)
 		}
 
 		// send the reported line per websocket
-		wsRoom := websocket.WebsocketHub.GetRoom("gamelog")
-		go wsRoom.Send(text)
+		if server.ID == "" || server.ID == DefaultServerID {
+			go websocket.WebsocketHub.GetRoom("gamelog").Send(text)
+		}
+		if server.ID != "" {
+			go websocket.WebsocketHub.GetRoom("servers:" + server.ID + ":gamelog").Send(text)
+		}
 
 		line := strings.Fields(text)
 		// Ensure logline slice is in bounds
 		if len(line) > 1 {
 			// Check if Factorio Server reports any errors if so handle it
 			if line[1] == "Error" {
+				log.Printf("Factorio server %s reported error: %s", server.ID, text)
 				err := server.checkLogError(line)
 				if err != nil {
 					log.Printf("Error checking Factorio Server Error: %s", err)
@@ -359,7 +393,7 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 				// log line for opened rcon connection
 				if strings.Contains(text, rconLog) {
 					log.Printf("Rcon running on Factorio Server")
-					err = connectRC()
+					err = server.connectRC()
 					if err != nil {
 						log.Printf("Error: %s", err)
 					}
@@ -377,8 +411,7 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 }
 
 func (server *Server) writeLog(logline string) error {
-	config := bootstrap.GetConfig()
-	logfileName := config.ConsoleLogFile
+	logfileName := server.consoleLogFile()
 	file, err := os.OpenFile(logfileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Printf("Cannot open logfile %s for appending Factorio Server output: %s", logfileName, err)
@@ -398,9 +431,17 @@ func (server *Server) writeLog(logline string) error {
 
 func (server *Server) checkLogError(logline []string) error {
 	// TODO Handle errors generated by running Factorio Server
-	log.Println(logline)
-
 	return nil
+}
+
+func redactedServerArgs(args []string) []string {
+	redacted := append([]string(nil), args...)
+	for i := range redacted {
+		if redacted[i] == "--rcon-password" && i+1 < len(redacted) {
+			redacted[i+1] = "[REDACTED]"
+		}
+	}
+	return redacted
 }
 
 func init() {
@@ -412,7 +453,27 @@ func serverWebsocketControl(controls websocket.WsControls) {
 	log.Println(controls)
 	if controls.Type == "command" {
 		command := controls.Value
+		serverID := DefaultServerID
+		var payload struct {
+			ServerID string `json:"serverId"`
+			Command  string `json:"command"`
+		}
+		if strings.HasPrefix(strings.TrimSpace(controls.Value), "{") {
+			if err := json.Unmarshal([]byte(controls.Value), &payload); err == nil {
+				if payload.ServerID != "" {
+					serverID = payload.ServerID
+				}
+				if payload.Command != "" {
+					command = payload.Command
+				}
+			}
+		}
 		server := GetFactorioServer()
+		if manager := GetServerManager(); manager != nil {
+			if targeted, ok := manager.GetServer(serverID); ok {
+				server = targeted
+			}
+		}
 		if server.GetRunning() {
 			log.Printf("Received command: %v", command)
 
@@ -429,23 +490,99 @@ func serverWebsocketControl(controls websocket.WsControls) {
 
 // RefreshVersion перечитывает версию Factorio бинарника
 func (s *Server) RefreshVersion() error {
-    config := bootstrap.GetConfig()
-    out, err := exec.Command(config.FactorioBinary, "--version").Output()
-    if err != nil {
-        return err
-    }
-    // Парсим версию из вывода
-    lines := strings.Split(string(out), "\n")
-    for _, line := range lines {
-        if strings.HasPrefix(line, "Version:") {
-            parts := strings.Fields(line)
-            if len(parts) >= 2 {
-                if err := s.Version.UnmarshalText([]byte(parts[1])); err == nil {
-                    log.Printf("Factorio version updated: %s", s.Version.String())
-                    break
-                }
-            }
-        }
-    }
-    return nil
+	out, err := exec.Command(s.factorioBinary(), "--version").Output()
+	if err != nil {
+		return err
+	}
+	// Парсим версию из вывода
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "Version:") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				if err := s.Version.UnmarshalText([]byte(parts[1])); err == nil {
+					log.Printf("Factorio version updated: %s", s.Version.String())
+					break
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (server *Server) factorioBinary() string {
+	if server.Paths.FactorioBinary != "" {
+		return server.Paths.FactorioBinary
+	}
+	return bootstrap.GetConfig().FactorioBinary
+}
+
+func (server *Server) settingsFile() string {
+	if server.Paths.SettingsFile != "" {
+		return server.Paths.SettingsFile
+	}
+	return bootstrap.GetConfig().SettingsFile
+}
+
+func (server *Server) adminFile() string {
+	if server.Paths.AdminFile != "" {
+		return server.Paths.AdminFile
+	}
+	return bootstrap.GetConfig().FactorioAdminFile
+}
+
+func (server *Server) savesDir() string {
+	if server.Paths.SavesDir != "" {
+		return server.Paths.SavesDir
+	}
+	return bootstrap.GetConfig().FactorioSavesDir
+}
+
+func (server *Server) modsDir() string {
+	if server.Paths.ModsDir != "" {
+		return server.Paths.ModsDir
+	}
+	return bootstrap.GetConfig().FactorioModsDir
+}
+
+func (server *Server) configFile() string {
+	if server.Paths.ConfigFile != "" {
+		return server.Paths.ConfigFile
+	}
+	return bootstrap.GetConfig().FactorioConfigFile
+}
+
+func (server *Server) consoleLogFile() string {
+	if server.Paths.ConsoleLogFile != "" {
+		return server.Paths.ConsoleLogFile
+	}
+	return bootstrap.GetConfig().ConsoleLogFile
+}
+
+func (server *Server) factorioLogFile() string {
+	if server.Paths.FactorioLog != "" {
+		return server.Paths.FactorioLog
+	}
+	return bootstrap.GetConfig().FactorioLog
+}
+
+func (server *Server) rconPort() int {
+	if server.RconPort != 0 {
+		return server.RconPort
+	}
+	return bootstrap.GetConfig().FactorioRconPort
+}
+
+func (server *Server) rconPass() string {
+	if server.RconPass != "" {
+		return server.RconPass
+	}
+	return bootstrap.GetConfig().FactorioRconPass
+}
+
+func (server *Server) logRoomName() string {
+	if server.ID == "" || server.ID == DefaultServerID {
+		return "gamelog"
+	}
+	return "servers:" + server.ID + ":gamelog"
 }

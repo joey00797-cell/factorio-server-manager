@@ -7,14 +7,14 @@ import Label from "../../../components/Label";
 import { useTranslation } from "react-i18next";
 
 
-const UploadSaveForm = ({onSuccess}) => {
+const UploadSaveForm = ({onSuccess, serverId}) => {
     const { t } = useTranslation();
     const [fileName, setFileName] = useState('');
     React.useEffect(() => setFileName(t('saves.upload_form.select_file')), [t]);
     const {register, handleSubmit, formState: {errors}} = useForm();
 
     const onSubmit = (data, e) => {
-        saves.upload(data.savefile[0]).then(_ => {
+        saves.upload(data.savefile[0], serverId).then(_ => {
             e.target.reset();
             onSuccess();
         })

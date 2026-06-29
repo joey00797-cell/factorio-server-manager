@@ -1,70 +1,92 @@
 import Panel from "../components/Panel";
+import Button from "../components/Button";
 import React, {useEffect, useState} from "react";
 import settingsResource from "../../api/resources/settings";
 import { useTranslation } from "react-i18next";
+import {useParams} from "react-router-dom";
+import ServerScopeHeader from "../components/ServerScopeHeader";
 
 const GameSettings = () => {
     const { t } = useTranslation();
+    const {serverId} = useParams();
 
-    const [settingsCategories, setSettingsCategories] = useState();
+    const [settingsCategories, setSettingsCategories] = useState({});
     const [loadError, setLoadError] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const fetchSettings = async () => {
         try {
-            const res = await settingsResource.game.list();
-            if (res && Object.keys(res).length > 0) {
-                setSettingsCategories(res);
-            } else {
-                setLoadError(true);
-            }
+            const res = await settingsResource.game.list(serverId);
+            setSettingsCategories(res || {});
+            setLoadError(false);
         } catch (e) {
             setLoadError(true);
         }
-    }
+    };
 
     useEffect(() => {
         fetchSettings();
-    }, []);
+    }, [serverId]);
+
+    const updateValue = (section, key, value) => {
+        setSettingsCategories(current => ({
+            ...current,
+            [section]: {
+                ...(current[section] || {}),
+                [key]: value,
+            }
+        }));
+    };
+
+    const save = async () => {
+        setIsSaving(true);
+        try {
+            await settingsResource.game.update(settingsCategories, serverId);
+            window.flash(t("saved"), "green");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <>
-        {loadError && (
-            <div className="mb-4 p-3 bg-red bg-opacity-20 border border-red rounded text-red-light font-bold">
-                ⚠ {t("game_settings.not_available")}
-            </div>
-        )}
-        <Panel
-            className="mb-4"
-            title={t("game_settings.title")}
-            content={
-                <>
-                    {settingsCategories && Object.keys(settingsCategories).map(key => {
-                        const settings = settingsCategories[key];
-                        return (
-                            <div key={key}>
-                                <h1 className="mb-1 text-lg text-dirty-white">{key}</h1>
-                                <table key={key} className="w-full mb-2">
-                                    <tbody>
-                                    {settings && (Object.keys(settings).length > 0 && Object.keys(settings).map(key => {
-                                        return (
-                                            <tr className="py-1" key={key}>
-                                                <td className="w-1/3 pr-4">{key}</td>
-                                                <td className="w-2/3 pr-4">{settings[key]}</td>
-                                            </tr>
-                                        )
-                                    })) || <tr>
-                                        <td colSpan={2}>--</td>
-                                    </tr>}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )
-                    })}
-                </>
-            }
-        />
+            <ServerScopeHeader/>
+            {loadError && (
+                <div className="mb-4 p-3 bg-red bg-opacity-20 border border-red rounded text-red-light font-bold">
+                    {t("game_settings.not_available")}
+                </div>
+            )}
+            <Panel
+                className="mb-4"
+                title={t("game_settings.title")}
+                content={
+                    <>
+                        {Object.keys(settingsCategories).map(section => {
+                            const settings = settingsCategories[section] || {};
+                            return (
+                                <div key={section} className="mb-6">
+                                    <h1 className="mb-2 text-lg text-dirty-white">{section}</h1>
+                                    <div className="grid gap-3">
+                                        {Object.keys(settings).map(key => (
+                                            <label className="block" key={`${section}-${key}`}>
+                                                <span className="block font-bold mb-1">{key}</span>
+                                                <input
+                                                    className="shadow appearance-none border w-full py-2 px-3 text-black"
+                                                    value={settings[key]}
+                                                    onChange={e => updateValue(section, key, e.target.value)}
+                                                />
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </>
+                }
+                actions={<Button type="success" isLoading={isSaving} onClick={save}>{t("save")}</Button>}
+            />
         </>
-    )
-}
+    );
+};
 
 export default GameSettings;
