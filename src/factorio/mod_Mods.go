@@ -154,8 +154,11 @@ func (mods *Mods) createMod(modName string, fileName string, fileRc io.Reader) e
 }
 
 func (mods *Mods) DownloadMod(url string, filename string, modId string) error {
-	var err error
+	return mods.DownloadModWithProgress(url, filename, modId, nil)
+}
 
+func (mods *Mods) DownloadModWithProgress(url string, filename string, modId string, onProgress func(current int64, total int64)) error {
+	var err error
 	var credentials Credentials
 	status, err := credentials.Load()
 	if err != nil {
@@ -166,36 +169,33 @@ func (mods *Mods) DownloadMod(url string, filename string, modId string) error {
 		log.Printf("error: credentials are invalid")
 		return errors.New("error: credentials are invalid")
 	}
-
-	//download the mod from the mod portal api
 	completeUrl := "https://mods.factorio.com" + url + "?username=" + credentials.Username + "&token=" + credentials.Userkey
-
 	response, err := http.Get(completeUrl)
 	if err != nil {
 		log.Printf("error on downloading mod: %s", err)
 		return err
 	}
-
-	log.Printf("download complete\n StatusCode: %d\n Status: %s", response.StatusCode, response.Status)
-
 	defer response.Body.Close()
-
 	if response.StatusCode != 200 {
 		log.Printf("StatusCode: %d", response.StatusCode)
-
 		return errors.New("Statuscode not 200: " + fmt.Sprint(response.StatusCode))
 	}
-
-	err = mods.createMod(modId, filename, response.Body)
+	var reader io.Reader = response.Body
+	if onProgress != nil {
+		pr := &ProgressReader{
+			Reader: response.Body,
+			Total:  response.ContentLength,
+		}
+		pr.OnProgress = func(percent int) {
+			onProgress(pr.Current, pr.Total)
+		}
+		reader = pr
+	}
+	err = mods.createMod(modId, filename, reader)
 	if err != nil {
 		log.Printf("error when creating Mod: %s", err)
 		return err
 	}
-
-	log.Printf("completed copying the response.Body")
-
-	//done everything is made inside the createMod
-
 	return nil
 }
 

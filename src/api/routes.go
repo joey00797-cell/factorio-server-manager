@@ -184,6 +184,12 @@ var apiRoutes = Routes{
 		SyncModsFromSaveHandler,
 		true,
 	}, {
+		"CancelSync",
+		"POST",
+		"/saves/mods/sync/cancel",
+		CancelSyncHandler,
+		false,
+	}, {
 		"LogTail",
 		"GET",
 		"/log/tail",
@@ -243,6 +249,12 @@ var apiRoutes = Routes{
 		"/server/install",
 		RemoveFactorio,
 		true,
+	}, {
+		"GetInstallStatus",
+		"GET",
+		"/server/install/status",
+		GetInstallStatus,
+		false,
 	}, {
 		"LogoutUser",
 		"GET",

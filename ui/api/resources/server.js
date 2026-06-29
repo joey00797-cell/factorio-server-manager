@@ -36,5 +36,9 @@ export default {
     kill: async () => {
         const response = await client.get('/api/server/kill');
         return response.data;
+    },
+    installStatus: async () => {
+        const response = await client.get('/api/server/install/status');
+        return response.data;
     }
 }

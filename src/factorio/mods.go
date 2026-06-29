@@ -51,7 +51,7 @@ func ModStartUp() {
 
 	//crate mod_pack dir
 	if _, err = os.Stat(config.FactorioModPackDir); os.IsNotExist(err) {
-		log.Println("no ModPackDir found ... creating one ...")
+		log.Println("ModPackDir not found\t\tcreating one...")
 		_ = os.Mkdir(config.FactorioModPackDir, factorioDirPerm)
 	}
 

@@ -9,6 +9,7 @@ import Input from "../components/Input";
 import Error from "../components/Error";
 import { useTranslation } from "react-i18next";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import socket from "../../api/socket";
 import {faToggleOn, faToggleOff} from "@fortawesome/free-solid-svg-icons";
 
 const Controls = ({serverStatus}) => {
@@ -17,6 +18,10 @@ const Controls = ({serverStatus}) => {
     const isFactorioInstalled = serverStatus.fac_version && serverStatus.fac_version !== "0.0.0.0";
     const [availableVersions, setAvailableVersions] = useState({});
     const [isInstalling, setIsInstalling] = useState(false);
+    const [installProgress, setInstallProgress] = useState(0);
+    const [installCurrent, setInstallCurrent] = useState(0);
+    const [installTotal, setInstallTotal] = useState(0);
+    const [isExtracting, setIsExtracting] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState('stable');
     const [autostart, setAutostart] = useState(false);
     const [saves, setSaves] = useState([]);
@@ -58,12 +63,54 @@ const Controls = ({serverStatus}) => {
         await server.kill();
     }
 
+    useEffect(() => {
+        socket.emit('server version subscribe');
+        server.installStatus().then(status => {
+            if (status && status.installing) {
+                setIsInstalling(true);
+                setInstallProgress(status.progress || 0);
+            }
+        }).catch(() => {});
+        const handleVersionMsg = (msg) => {
+            try {
+                const data = JSON.parse(msg);
+                if (data.type === 'download_progress') {
+                    setInstallProgress(data.percent);
+                    setInstallCurrent(Math.round(data.current / 1024 / 1024 * 10) / 10);
+                    setInstallTotal(Math.round(data.total / 1024 / 1024 * 10) / 10);
+                } else if (data.type === 'extracting') {
+                    setInstallProgress(100);
+                    setIsExtracting(true);
+                } else if (data.type === 'install_complete') {
+                    setIsInstalling(false);
+                    setIsExtracting(false);
+                    setInstallProgress(0);
+                    setInstallCurrent(0);
+                    setInstallTotal(0);
+                    window.flash('Factorio ' + data.version + ' installed!', 'green');
+                } else if (data.type === 'install_error') {
+                    setIsInstalling(false);
+                    setIsExtracting(false);
+                    setInstallProgress(0);
+                    window.flash('Install failed: ' + data.error, 'red');
+                }
+            } catch(e) {}
+        };
+        socket.on('server_version', handleVersionMsg);
+        return () => socket.off('server_version', handleVersionMsg);
+    }, []);
+
     const installVersion = async () => {
         setIsInstalling(true);
-        await server.installVersion(selectedVersion);
-        setIsInstalling(false);
-        // Ждём секунду чтобы версия обновилась
-        setTimeout(() => window.location.reload(), 1000);
+        setInstallProgress(0);
+        try {
+            await server.installVersion(selectedVersion);
+        } catch(e) {
+            if (e?.response?.status !== 409) {
+                setIsInstalling(false);
+                window.flash('Install failed', 'red');
+            }
+        }
     }
 
     const versionLabel = (type) => {
@@ -171,6 +218,7 @@ const Controls = ({serverStatus}) => {
                 </div>
             }
             actions={
+                <>
                 <div className="md:flex items-center gap-2">
                     {serverStatus.running ? <>
                         <Button onClick={stopServer} isLoading={isStopping} isDisabled={isKilling} size="sm" className="w-full md:w-auto mb-2 md:mb-0" type="default">{t("controls.save&stop")}</Button>
@@ -178,8 +226,18 @@ const Controls = ({serverStatus}) => {
                     </> : <>
                         <Button isSubmit={true} isDisabled={isDisabled || isInstalling || !isFactorioInstalled} isLoading={isStarting} size="sm" type="success" className="w-full md:w-auto">{t("controls.start_server")}</Button>
                         <Button onClick={installVersion} isLoading={isInstalling} isDisabled={serverStatus.running} size="sm" type="default" className="w-full md:w-auto">{t("controls.install_factorio")}</Button>
-                    </>}
+                    </>
+                    }
                 </div>
+                {isInstalling && (
+                    <div className="mt-4 mx-2">
+                        <div className="w-full bg-gray-dark rounded h-3">
+                            <div className="bg-orange h-3 rounded transition-all duration-300" style={{width: `${installProgress}%`}}/>
+                        </div>
+                        <p className="text-sm text-gray-light mt-1">{isExtracting ? t("controls.extracting") : t("controls.downloading", {current: installCurrent, total: installTotal})}</p>
+                    </div>
+                )}
+                </>
             }
         />
         </form>

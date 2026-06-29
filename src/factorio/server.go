@@ -91,9 +91,9 @@ func NewFactorioServer() (err error) {
 	settingsPath := config.SettingsFile
 	var settings *os.File
 
-	log.Printf("DEBUG: checking settings file: %s", settingsPath)
+	
 	if _, err = os.Stat(settingsPath); os.IsNotExist(err) {
-		log.Printf("DEBUG: settings file NOT FOUND, loading default config")
+		log.Printf("server-settings.json not found\t\tloading default config")
 
 		defaultContent := getDefaultServerSettings()
 
@@ -111,7 +111,7 @@ func NewFactorioServer() (err error) {
 		}
 		defer settings.Close()
 	} else {
-		log.Printf("DEBUG: settings file EXISTS, opening normally")
+		log.Printf("server-settings.json present\t\topening normally")
 		// otherwise, open file normally
 		settings, err = os.Open(settingsPath)
 		if err != nil {
@@ -333,7 +333,7 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 	for stdScanner.Scan() {
 		text := stdScanner.Text()
 
-		log.Printf("[SRV] %s", text)
+		log.Printf("%s", text)
 		if err := server.writeLog(text); err != nil {
 			log.Printf("Error: %s", err)
 		}

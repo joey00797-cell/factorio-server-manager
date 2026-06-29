@@ -122,6 +122,11 @@ const mods = {
             },
         }
     }
+,
+    cancelSync: async () => {
+        const response = await client.post('/api/saves/mods/sync/cancel');
+        return response.data;
+    }
 }
 
 export default mods;

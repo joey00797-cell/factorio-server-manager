@@ -31,7 +31,7 @@ func main() {
 	// Initialize HTTP router -- also initializes websocket
 	router := api.NewRouter()
 
-	log.Printf("Starting server on: %s:%s", config.ServerIP, config.ServerPort)
+	log.Printf("FSM starting on: %s:%s", config.ServerIP, config.ServerPort)
 	log.Fatal(http.ListenAndServe(config.ServerIP+":"+config.ServerPort, router))
 
 }

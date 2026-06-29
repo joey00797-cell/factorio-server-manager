@@ -94,9 +94,6 @@ func NewConfig(args []string) Config {
 	instantiated.mapFlags(opts)
 	instantiated.loadServerConfig()
 
-	abs, err := filepath.Abs(instantiated.FactorioModPackDir)
-	println(abs)
-
 	return instantiated
 }
 
@@ -195,7 +192,7 @@ func (config *Config) loadServerConfig() {
 
 	if config.FactorioRconPort == 0 {
 		config.FactorioRconPort = randomPort()
-		log.Println("Rcon port is empty, generated new one:", config.FactorioRconPort)
+		log.Printf("Rcon port is empty\t\tgenerated new one: %d", config.FactorioRconPort)
 	}
 }
 
@@ -229,7 +226,7 @@ func (config *Config) mapFlags(flags Flags) {
 	config.FactorioRconPort = flags.FactorioRconPort
 
 	config.MaxUploadSize = flags.FactorioMaxUpload * 100000
-	log.Printf("Max upload: %d", config.MaxUploadSize)
+	
 	log.Printf("Conffile: %s", config.ConfFile)
 
 	if filepath.IsAbs(flags.FactorioBinary) {

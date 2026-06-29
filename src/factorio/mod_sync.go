@@ -9,6 +9,8 @@ import (
 	"compress/flate"
 	"compress/zlib"
 	"net/http"
+	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
@@ -16,9 +18,20 @@ import (
 )
 
 var modsSyncing atomic.Bool
+var syncCancelMu sync.Mutex
+var syncCancelFn context.CancelFunc
 
 func IsModsSyncing() bool {
 	return modsSyncing.Load()
+}
+
+func CancelSync() {
+	syncCancelMu.Lock()
+	defer syncCancelMu.Unlock()
+	if syncCancelFn != nil {
+		syncCancelFn()
+		syncCancelFn = nil
+	}
 }
 
 type ModSyncResult struct {
@@ -28,14 +41,16 @@ type ModSyncResult struct {
 }
 
 type ModSyncProgress struct {
-	Type    string        `json:"type"`
-	Status  string        `json:"status"`
-	Current int           `json:"current,omitempty"`
-	Total   int           `json:"total,omitempty"`
-	Mod     string        `json:"mod,omitempty"`
-	Message string        `json:"message,omitempty"`
-	Warning string        `json:"warning,omitempty"`
-	Mods    []ModSyncResult `json:"mods,omitempty"`
+	Type         string        `json:"type"`
+	Status       string        `json:"status"`
+	Current      int           `json:"current,omitempty"`
+	Total        int           `json:"total,omitempty"`
+	Mod          string        `json:"mod,omitempty"`
+	Message      string        `json:"message,omitempty"`
+	Warning      string        `json:"warning,omitempty"`
+	Mods         []ModSyncResult `json:"mods,omitempty"`
+	CurrentBytes int64         `json:"current_bytes,omitempty"`
+	TotalBytes   int64         `json:"total_bytes,omitempty"`
 }
 
 // baseModNames — моды которые есть в любом vanilla + DLC сейве
@@ -67,6 +82,7 @@ type portalModRelease struct {
 	DownloadURL string `json:"download_url"`
 	FileName    string `json:"file_name"`
 	Version     string `json:"version"`
+	FileSize    int64  `json:"file_size"`
 }
 
 type portalModInfo struct {
@@ -196,6 +212,15 @@ func getModRelease(modName string, version string) (portalModRelease, error) {
 
 	for _, release := range info.Releases {
 		if release.Version == version {
+			// HEAD запрос для получения размера файла
+			var creds Credentials
+			if _, err := creds.Load(); err == nil && creds.Username != "" {
+				headURL := fmt.Sprintf("https://mods.factorio.com%s?username=%s&token=%s", release.DownloadURL, creds.Username, creds.Userkey)
+				if headResp, err := http.Head(headURL); err == nil {
+					release.FileSize = headResp.ContentLength
+					headResp.Body.Close()
+				}
+			}
 			return release, nil
 		}
 	}
@@ -297,15 +322,34 @@ func SyncModsFromSave(savePath string, modNames []string) {
 		return
 	}
 
-	// 5. Качаем недостающие
+	// 5. Собираем релизы и считаем общий размер
+	sendSyncProgress(ModSyncProgress{Status: "calculating", Total: total})
+	releases := make([]portalModRelease, len(toDownload))
+	var totalBytes int64
+	for i, saveMod := range toDownload {
+		wantVersion := normalizeVersion(saveMod.Version)
+		if baseModNames[saveMod.Name] {
+			continue
+		}
+		rel, relErr := getModRelease(saveMod.Name, wantVersion)
+		if relErr == nil {
+			releases[i] = rel
+			totalBytes += rel.FileSize
+		}
+	}
+	var currentBytes int64
+
+// 6. Качаем недостающие
 	for i, saveMod := range toDownload {
 		wantVersion := normalizeVersion(saveMod.Version)
 
 		sendSyncProgress(ModSyncProgress{
-			Status:  "progress",
-			Current: i + 1,
-			Total:   total,
-			Mod:     saveMod.Name,
+			Status:       "progress",
+			Current:      i + 1,
+			Total:        total,
+			Mod:          saveMod.Name,
+			CurrentBytes: currentBytes,
+			TotalBytes:   totalBytes,
 		})
 
 		// Сначала проверяем локальный список DLC/базовых модов
@@ -333,13 +377,26 @@ func SyncModsFromSave(savePath string, modNames []string) {
 			return
 		}
 
-		if err = mods.DownloadMod(release.DownloadURL, release.FileName, saveMod.Name); err != nil {
+		currentModIdx := i
+		if err = mods.DownloadModWithProgress(release.DownloadURL, release.FileName, saveMod.Name, func(cur int64, total int64) {
+			sendSyncProgress(ModSyncProgress{
+				Status:       "progress",
+				Current:      currentModIdx + 1,
+				Total:        len(toDownload),
+				Mod:          saveMod.Name,
+				CurrentBytes: currentBytes + cur,
+				TotalBytes:   totalBytes,
+			})
+		}); err != nil {
 			results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "not_found"})
 			log.Printf("SyncModsFromSave: download failed for %s: %v", saveMod.Name, err)
 			continue
 		}
 
 		results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "downloaded"})
+		if i < len(releases) {
+			currentBytes += releases[i].FileSize
+		}
 		log.Printf("SyncModsFromSave: downloaded %s %s (%d/%d)", saveMod.Name, wantVersion, i+1, total)
 	}
 

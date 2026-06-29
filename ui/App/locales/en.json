@@ -83,6 +83,8 @@
         "size": "Size",
         "actions": "Actions",
         "create_new_save_only_when_server_not_running": "Create a new Save is only possible if the Factorio server is not running.",
+        "factorio_not_installed": "Factorio is not installed. Please install the server in \"Server Status\" before creating a save.",
+        "factorio_not_installed": "Factorio is not installed. Please install the server in \"Server Status\" before creating a save.",
         "save_form": {
             "file_name": "Savefile Name",
             "save_file_error_message": "Savefile Name is required",
@@ -112,7 +114,9 @@
         "start_server": "Start Server",
         "autostart": "Autostart",
         "install_factorio": "Install Factorio",
-        "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio»."
+        "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio».",
+        "downloading": "Downloading... {{current}} MB / {{total}} MB",
+        "extracting": "Extracting..."
     },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",
@@ -154,7 +158,14 @@
         "status_already_installed": "Already installed",
         "status_builtin": "Built-in / DLC",
         "status_not_found": "Not found on portal",
-        "status_downloading": "Downloading..."
+        "status_downloading": "Downloading...",
+        "select_missing": "Select missing",
+        "select_all": "Select all",
+        "deselect_all": "Deselect all",
+        "sync_selected": "Download & enable ({{count}})",
+        "enable_selected": "Enable ({{count}})",
+        "cancel_sync": "Cancel",
+        "calculating": "Calculating..."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",

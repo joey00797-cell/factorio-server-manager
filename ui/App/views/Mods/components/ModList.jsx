@@ -12,14 +12,17 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
     const dlcMods = mods.filter(m => DLC_MODS.has(m.name));
     const regularMods = mods.filter(m => !DLC_MODS.has(m.name));
     const dlcEnabled = dlcMods.some(m => m.enabled);
-
+    const DLC_LIST = ["elevated-rails", "quality", "space-age"];
     const toggleDLC = () => {
-        dlcMods.forEach(m => {
-            // Если хотя бы один включён — выключаем все, иначе включаем все
-            if (dlcEnabled === m.enabled) {
-                toggleMod(m.name);
-            }
-        });
+        if (dlcMods.length > 0) {
+            dlcMods.forEach(m => {
+                if (dlcEnabled === m.enabled) {
+                    toggleMod(m.name);
+                }
+            });
+        } else {
+            DLC_LIST.forEach(name => toggleMod(name));
+        }
     };
 
     return (
@@ -36,7 +39,7 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
             </thead>
             <tbody>
                 {/* DLC группа */}
-                {factorioVersion !== null && dlcMods.length > 0 && (
+                {factorioVersion !== null && (
                     <tr className="py-1 bg-blue-50 hover:glow-orange hover:bg-orange hover:text-black">
                         <td className="pr-4 italic text-blue-600">
                             Space Age DLC

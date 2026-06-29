@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 	"github.com/gorilla/sessions"
@@ -253,7 +254,11 @@ func CreateSaveHandler(w http.ResponseWriter, r *http.Request) {
 	saveFile := filepath.Join(config.FactorioSavesDir, saveName)
 	cmdOut, err := factorio.CreateSave(saveFile)
 	if err != nil {
-		resp = fmt.Sprintf("Error creating save {%s}: %s", saveName, err)
+		if strings.Contains(err.Error(), "no such file or directory") {
+			resp = "saves.factorio_not_installed"
+		} else {
+			resp = fmt.Sprintf("Error creating save {%s}: %s", saveName, err)
+		}
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -852,9 +857,6 @@ func min(a, b int) int {
 }
 
 func InstallFactorio(w http.ResponseWriter, r *http.Request) {
-    var resp interface{}
-    defer func() { WriteResponse(w, resp) }()
-
     var data struct {
         Version string `json:"version"`
     }
@@ -865,35 +867,55 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
         data.Version = "stable"
     }
 
+    status := factorio.GetInstallStatus()
+    if status.Installing {
+        w.WriteHeader(http.StatusConflict)
+        WriteResponse(w, "installation already in progress")
+        return
+    }
+
+    factorio.SetInstallStatus(factorio.InstallStatus{Installing: true, Version: data.Version, Progress: 0})
+    wsRoom := websocket.WebsocketHub.GetRoom("server_version")
+
+    go func() {
     config := bootstrap.GetConfig()
     url := fmt.Sprintf("https://www.factorio.com/get-download/%s/headless/linux64", data.Version)
-    
-    log.Printf("Downloading Factorio %s from %s", data.Version, url)
+    log.Printf("[INSTALL] Starting download: %s", url)
 
     out, err := os.Create("/tmp/factorio_install.tar.xz")
     if err != nil {
-        w.WriteHeader(http.StatusInternalServerError)
-        resp = fmt.Sprintf("Error creating temp file: %s", err)
+        factorio.SetInstallStatus(factorio.InstallStatus{})
+        wsRoom.Send(fmt.Sprintf(`{"type":"install_error","error":"%s"}`, err.Error()))
         return
     }
     defer out.Close()
 
     dlResp, err := http.Get(url)
     if err != nil {
-        w.WriteHeader(http.StatusInternalServerError)
-        resp = fmt.Sprintf("Error downloading Factorio: %s", err)
+        factorio.SetInstallStatus(factorio.InstallStatus{})
+        wsRoom.Send(fmt.Sprintf(`{"type":"install_error","error":"%s"}`, err.Error()))
         return
     }
     defer dlResp.Body.Close()
-    io.Copy(out, dlResp.Body)
+
+    pr := &factorio.ProgressReader{
+        Reader: dlResp.Body,
+        Total:  dlResp.ContentLength,
+    }
+    pr.OnProgress = func(percent int) {
+        factorio.SetInstallStatus(factorio.InstallStatus{Installing: true, Version: data.Version, Progress: percent})
+        wsRoom.Send(fmt.Sprintf(`{"type":"download_progress","version":"%s","percent":%d,"current":%d,"total":%d}`, data.Version, percent, pr.Current, pr.Total))
+    }
+    io.Copy(out, pr)
 
     extractDir := config.FactorioDir
-    log.Printf("Extracting Factorio to: %s", extractDir)
+    log.Printf("[INSTALL] Download complete, extracting to: %s", extractDir)
+    wsRoom.Send(fmt.Sprintf(`{"type":"extracting","version":"%s"}`, data.Version))
     os.MkdirAll(extractDir, 0755)
     cmd := exec.Command("tar", "-xf", "/tmp/factorio_install.tar.xz", "-C", extractDir, "--strip-components=1")
     if err := cmd.Run(); err != nil {
-        w.WriteHeader(http.StatusInternalServerError)
-        resp = fmt.Sprintf("Error extracting Factorio: %s", err)
+        factorio.SetInstallStatus(factorio.InstallStatus{})
+        wsRoom.Send(fmt.Sprintf(`{"type":"install_error","error":"extraction failed: %s"}`, err.Error()))
         return
     }
     // Копируем server-settings.json из примера
@@ -930,8 +952,26 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
         log.Printf("Не удалось обновить версию: %v", err)
     }
     
-    resp = fmt.Sprintf("Factorio %s installed successfully", data.Version)
-    log.Println(resp)
+    factorio.SetInstallStatus(factorio.InstallStatus{})
+    wsRoom.Send(fmt.Sprintf(`{"type":"install_complete","version":"%s"}`, data.Version))
+    log.Printf("[INSTALL] Complete: Factorio %s installed successfully", data.Version)
+    }()
+
+    w.WriteHeader(http.StatusAccepted)
+    WriteResponse(w, map[string]string{"status": "started", "version": data.Version})
+}
+
+// GetInstallStatus returns current Factorio installation status
+func GetInstallStatus(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+    status := factorio.GetInstallStatus()
+    WriteResponse(w, status)
+}
+
+// CancelSyncHandler cancels the current mod sync operation
+func CancelSyncHandler(w http.ResponseWriter, r *http.Request) {
+    factorio.CancelSync()
+    WriteResponse(w, "sync cancelled")
 }
 
 // RemoveFactorio removes the Factorio installation

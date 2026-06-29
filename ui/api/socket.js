@@ -35,6 +35,10 @@ function connect() {
         );
     }
 
+    function serverVersionSubscribeEvent() {
+        socket.send(JSON.stringify({room_name: "", controls: {type: "subscribe", value: "server_version"}}));
+    }
+
     function serverStatusSubscribeEvent() {
         socket.send(
             JSON.stringify(
@@ -75,6 +79,7 @@ function connect() {
         bus.on('log subscribe', logSubscribeEvent);
         bus.on('log unsubscribe', logUnsubscribeEvent);
         bus.on('server status subscribe', serverStatusSubscribeEvent);
+        bus.on('server version subscribe', serverVersionSubscribeEvent);
         bus.on('command send', commandSendEvent);
         bus.on('mods sync subscribe', modsSyncSubscribeEvent);
         bus.on('mods sync unsubscribe', modsSyncUnsubscribeEvent);
@@ -84,6 +89,7 @@ function connect() {
         bus.off('log subscribe', logSubscribeEvent);
         bus.off('log unsubscribe', logUnsubscribeEvent);
         bus.off('server status subscribe', serverStatusSubscribeEvent);
+        bus.off('server version subscribe', serverVersionSubscribeEvent);
         bus.off('command send', commandSendEvent);
         bus.off('mods sync subscribe', modsSyncSubscribeEvent);
         bus.off('mods sync unsubscribe', modsSyncUnsubscribeEvent);

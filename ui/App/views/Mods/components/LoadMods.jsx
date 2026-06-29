@@ -43,7 +43,10 @@ const LoadMods = ({refreshMods}) => {
     const [checkedMods, setCheckedMods] = useState({});
     const [syncError, setSyncError] = useState(null);
     const [currentMod, setCurrentMod] = useState(null);
+    const [currentBytes, setCurrentBytes] = useState(0);
+    const [totalBytes, setTotalBytes] = useState(0);
     const [warning, setWarning] = useState(null);
+    const [isCalculating, setIsCalculating] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -60,14 +63,23 @@ const LoadMods = ({refreshMods}) => {
     useEffect(() => {
         const handler = (message) => {
             const data = JSON.parse(message);
-            if (data.status === "progress") {
+            if (data.status === "calculating") {
+                setIsCalculating(true);
+                setIsSyncing(true);
+            } else if (data.status === "progress") {
+                setIsCalculating(false);
                 setCurrentMod(data.mod);
+                setCurrentBytes(Math.round((data.current_bytes || 0) / 1024 / 1024 * 10) / 10);
+                setTotalBytes(Math.round((data.total_bytes || 0) / 1024 / 1024 * 10) / 10);
                 setModRows(rows => rows.map(r =>
                     r.name === data.mod ? {...r, status: "downloading"} : r
                 ));
             } else if (data.status === "done") {
                 setIsSyncing(false);
+                setIsCalculating(false);
                 setCurrentMod(null);
+                setCurrentBytes(0);
+                setTotalBytes(0);
                 setWarning(data.warning || null);
                 if (data.mods) {
                     setModRows(data.mods);
@@ -76,7 +88,10 @@ const LoadMods = ({refreshMods}) => {
                 refreshMods();
             } else if (data.status === "error") {
                 setIsSyncing(false);
+                setIsCalculating(false);
                 setCurrentMod(null);
+                setCurrentBytes(0);
+                setTotalBytes(0);
                 setSyncError(data.message);
             }
         };
@@ -130,6 +145,17 @@ const LoadMods = ({refreshMods}) => {
             setIsSyncing(false);
             setSyncError("Failed to start sync: " + e.message);
         }
+    };
+
+    const onCancel = async () => {
+        try {
+            await modsResource.cancelSync();
+        } catch(e) {}
+        setIsSyncing(false);
+        setIsCalculating(false);
+        setCurrentMod(null);
+        setCurrentBytes(0);
+        setTotalBytes(0);
     };
 
     const toggleCheck = (name) => {
@@ -197,23 +223,41 @@ const LoadMods = ({refreshMods}) => {
                 <div className="mt-4">
                     {/* Кнопки выбора */}
                     <div className="flex mb-2 gap-2">
-                        <Button size="sm" onClick={selectAll}>{t("mods.sync_from_save")}</Button>
-                        <Button size="sm" onClick={clearAll}>{t("cancel")}</Button>
-                        <Button
-                            size="sm"
-                            isDisabled={checkedCount === 0 || isSyncing}
-                            isLoading={isSyncing}
-                            onClick={onSync}
-                        >
-                            Sync selected ({checkedCount})
-                        </Button>
+                        <Button size="sm" onClick={selectAll}>{t("mods.select_missing")}</Button>
+                        <Button size="sm" onClick={() => {
+                            const all = {};
+                            modRows.forEach(m => { all[m.name] = true; });
+                            setCheckedMods(all);
+                        }}>{t("mods.select_all")}</Button>
+                        <Button size="sm" onClick={clearAll}>{t("mods.deselect_all")}</Button>
+                        {isSyncing ? (
+                            <Button size="sm" type="danger" onClick={onCancel}>{t("mods.cancel_sync")}</Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                type="success"
+                                isDisabled={checkedCount === 0}
+                                onClick={onSync}
+                            >
+                                {t("mods.sync_selected", {count: checkedCount}).replace("{{count}}", checkedCount)}
+                            </Button>
+                        )}
                     </div>
 
                     {/* Прогресс */}
-                    {currentMod && (
-                        <div className="mb-2 text-sm text-orange">
-                            <FontAwesomeIcon icon={faSpinner} spin={true} className="mr-2"/>
-                            {t("mods.sync_downloading")}: {currentMod}
+                    {(isSyncing || isCalculating) && (
+                        <div className="mb-3">
+                            <div className="text-sm text-orange mb-1">
+                                <FontAwesomeIcon icon={faSpinner} spin={true} className="mr-2"/>
+                                {isCalculating ? t("mods.calculating") : `${t("mods.sync_downloading")}: ${currentMod}`}
+                            </div>
+                            <div className="w-full bg-gray-dark rounded h-2">
+                                <div className="bg-orange h-2 rounded transition-all duration-300"
+                                    style={{width: isCalculating ? "5%" : `${totalBytes > 0 ? Math.round(currentBytes / totalBytes * 100) : 0}%`}}/>
+                            </div>
+                            {!isCalculating && totalBytes > 0 && (
+                                <p className="text-xs text-gray-light mt-1">{currentBytes} MB / {totalBytes} MB</p>
+                            )}
                         </div>
                     )}
 
@@ -236,7 +280,11 @@ const LoadMods = ({refreshMods}) => {
                                 return (
                                     <tr key={dlcKey} className="border-b hover:bg-gray-100 cursor-pointer bg-blue-50"
                                         onClick={() => !allInstalled && toggleCheck(dlcKey)}>
-                                        <td className="py-1 pr-2"></td>
+                                        <td className="py-1 pr-2">
+                                            {!allInstalled && (
+                                                <input type="checkbox" checked={!!checkedMods[dlcKey]} onChange={() => toggleCheck(dlcKey)} onClick={e => e.stopPropagation()}/>
+                                            )}
+                                        </td>
                                         <td className="py-1 pr-4 italic text-blue-600">
                                             Space Age DLC
                                             <span className="ml-2 text-xs text-gray-500">

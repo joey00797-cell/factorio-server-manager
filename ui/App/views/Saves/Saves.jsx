@@ -42,10 +42,9 @@ const Saves = ({serverStatus}) => {
                     content={
                         serverStatus.running
                             ? <p className="text-red-light pt-4 pb-24">
-                                Create a new Save is only possible if the Factorio server is
-                                not running.
+                                {t("saves.create_new_save_only_when_server_not_running")}
                             </p>
-                            : <CreateSaveForm onSuccess={updateList}/>
+                            : <CreateSaveForm onSuccess={updateList} isFactorioInstalled={!!(serverStatus.fac_version && serverStatus.fac_version !== "0.0.0.0")}/>
                     }
                 />
                 <Panel

@@ -82,6 +82,8 @@
         "size": "Размер",
         "actions": "Действия",
         "create_new_save_only_when_server_not_running": "Создать новый сохранённый файл возможно только если сервер Factorio не запущен.",
+        "factorio_not_installed": "Factorio не установлен. Установите сервер во вкладке \"Статус сервера\" перед созданием сейва.",
+        "factorio_not_installed": "Factorio не установлен. Установите сервер во вкладке \"Статус сервера\" перед созданием сейва.",
         "save_form": {
             "file_name": "Имя файла сохранения",
             "save_file_error": "Имя файла обязательное поле",
@@ -113,7 +115,9 @@
         "unknown": "Неизвестно",
         "autostart": "Автостарт",
         "install_factorio": "Установить Factorio",
-        "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio»."
+        "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio».",
+        "downloading": "Загрузка... {{current}} МБ / {{total}} МБ",
+        "extracting": "Распаковка..."
     },
     "mods": {
         "change_mods_while_running_error_message": "Изменение модов отключено, пока сервер работает!",
@@ -155,7 +159,14 @@
         "status_already_installed": "Уже установлен",
         "status_builtin": "Встроенный / DLC",
         "status_not_found": "Не найден на портале",
-        "status_downloading": "Скачивается..."
+        "status_downloading": "Скачивается...",
+        "select_missing": "Выбрать недостающие",
+        "select_all": "Выбрать все",
+        "deselect_all": "Снять все",
+        "sync_selected": "Скачать и включить ({{count}})",
+        "enable_selected": "Включить ({{count}})",
+        "cancel_sync": "Отмена",
+        "calculating": "Расчёт размера..."
     },
     "login": {
         "login_failed_message": "Ошибка входа. Неверное имя пользователя или пароль.",
