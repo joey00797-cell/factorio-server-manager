@@ -1,0 +1,15 @@
+services:
+  factorio-server-manager:
+    image: factorio-server-manager:windows-test
+    container_name: fsm-windows-test
+    restart: unless-stopped
+    ports:
+      - "8080:80/tcp"
+      - "34197-34205:34197-34205/udp"
+    volumes:
+      - fsm-data:/opt/fsm-data
+      - factorio-server:/opt/factorio-server
+
+volumes:
+  fsm-data:
+  factorio-server:

@@ -1,0 +1,7 @@
+node_modules
+build
+docker/factorio-server-manager-linux.zip
+factorio-server-manager
+.git
+.cache
+*.log

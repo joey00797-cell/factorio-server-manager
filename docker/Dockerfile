@@ -21,5 +21,6 @@ RUN curl --location "https://github.com/OpenFactorioServerManager/factorio-serve
     && mv factorio-server-manager fsm
 
 COPY ./entrypoint.sh /opt/entrypoint.sh
+RUN sed -i 's/\r$//' /opt/entrypoint.sh && chmod u+x /opt/entrypoint.sh
 
 ENTRYPOINT ["/opt/entrypoint.sh"]

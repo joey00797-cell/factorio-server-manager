@@ -20,11 +20,11 @@ RUN npm install
 COPY ./ ./
 
 COPY docker/build-release.sh /usr/local/bin/build-release.sh
-RUN chmod u+x /usr/local/bin/build-release.sh
+RUN sed -i 's/\r$//' /usr/local/bin/build-release.sh && chmod u+x /usr/local/bin/build-release.sh
 
 VOLUME /build
 VOLUME $FACTORIO_ROOT
-RUN ["/usr/local/bin/build-release.sh"]
+RUN sh /usr/local/bin/build-release.sh
 
 FROM scratch AS output
-COPY --from=build ${FACTORIO_ROOT}/build/* .
+COPY --from=build /go/src/factorio-server-manager/build/* .

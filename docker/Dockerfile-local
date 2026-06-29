@@ -19,5 +19,6 @@ RUN unzip /factorio-server-manager-linux.zip \
     && mv factorio-server-manager fsm
 
 COPY entrypoint.sh /opt
+RUN sed -i 's/\r$//' /opt/entrypoint.sh && chmod u+x /opt/entrypoint.sh
 
 ENTRYPOINT ["/opt/entrypoint.sh"]
