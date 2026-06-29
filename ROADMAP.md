@@ -1,6 +1,7 @@
 # FSM Roadmap
 
 ## ✅ Done
+
 - [x] Fix: mod folder cleanup on Docker volume
 - [x] Fix: save file parsing for Factorio 2.0
 - [x] Add: read all mods with exact versions directly from save file
@@ -28,48 +29,63 @@
 - [x] Add: diff logging in UpdateServerSettings (only changed fields logged)
 - [x] Add: full UI translation coverage (all views and components)
 - [x] Add: row highlight on hover in mod list (thanks @TheCoolestPaul)
+- [x] Add: Game Settings warning when config.ini not available
+- [x] Add: real byte-based progress bar for Factorio installation (MB display)
+- [x] Add: real byte-based progress bar for mod sync downloads (MB display + cancel)
+- [x] Add: multi-server support — server registry, per-server instances (thanks @TheCoolestPaul)
+- [x] Add: server list dashboard with cards (start/stop/kill/save/manage/delete)
+- [x] Add: per-server isolated paths (/opt/factorio-server/instances/N/)
+- [x] Add: shared Factorio version cache (/opt/factorio-server/versions/)
+- [x] Add: legacy single-server migration to server ID 1 on first start
+- [x] Add: editable server network config (bind IP, port, autostart per server)
+- [x] Add: FSM logs page (separate from Factorio server logs)
+- [x] Add: per-server scoped API routes
+- [x] Add: mod options page per server (raw base64 mod-settings.dat editor)
 - [x] Fix: server-settings.json corrupted to null on server start
 - [x] Fix: GetServerSettings read from memory instead of file
 - [x] Fix: UpdateServerSettings overwrote file with form-only data (now merges)
 - [x] Fix: react-hook-form Input/Checkbox missing name prop (values not submitted)
 - [x] Fix: autostart saved to conf.json
-## 🚧 In Progress
-### Server
-- [x] Autostart toggle (saved to conf.json, UI toggle in Controls)
-- [ ] After Factorio install: compare example config with current, prompt to sync new fields
-- [x] Add: Game Settings warning when config.ini not available
 - [x] Fix: controls i18n — autostart, install_factorio, factorio_not_installed keys
 - [x] Fix: Dockerfile warnings (FromAsCasing, LegacyKeyValueFormat)
+- [x] Fix: ca-certificates missing in Docker image (mod portal SSL errors)
+
+## 🚧 In Progress
+
+### Server
+
+- [ ] Factorio installation progress bar (WebSocket) — перенести в мультисервер архитектуру
+- [ ] After Factorio install: compare example config with current, prompt to sync new fields
+- [ ] Fix: server status WebSocket not updating on first server start (requires F5)
+- [ ] Fix: Error starting Factorio server: %!s(<nil>) — кривое логирование nil error
 - [ ] Remember selected save file between page reloads
-- [ ] Factorio installation progress bar
-- [ ] Multi-version Factorio support via symlinks
-- [ ] Add server page (first step toward multi-server: local or remote via RCON)
-- [ ] Import server-settings.json from UI
-- [ ] Server name field
+
+### Mods
+
+- [ ] Fix: mod sync compatibility with new multi-server architecture
+- [ ] Auto-resolve mod dependencies when creating a new save
 
 ### Locales
+
 - [ ] Auto-locale generation via Google Translate API on first login
-- [ ] Translation coverage improvements (new features may introduce untranslated strings)
-- [ ]  - One of them is the entry point instead of the locale. I know) just select the locale in the menu
+- [ ] Translation coverage improvements (new multi-server pages)
 
 ## 📋 Planned
 
-### Mods
-- [ ] Auto-resolve mod dependencies when creating a new save
-- [ ] Real byte-based progress bar for mod downloads
-
 ### Server
-- [ ] Multi-server support:
-  - [ ] New server list page (empty state + "Create server" button)
-  - [ ] Server instance architecture (/opt/factorio-server/downloads/ + instances/)
-  - [ ] Download version → cached tar.xz, status: DOWNLOADED
-  - [ ] Create server → extract to instance folder, status: INSTALLED  
-  - [ ] Server card UI (name, IP, port, version, save, start/stop/kill)
-  - [ ] Limit to 1 server for now ("Multi-server coming soon" on second create)
-- [ ] Dual logs — Factorio server logs + FSM manager logs
-- [ ] Extended startup logging for debugging server-settings.json null bug
+
+- [ ] Import server-settings.json from UI
+- [ ] After Factorio install: sync new fields from example config (dialog)
+- [ ] Favicon
 
 ### Authentication
+
 - [ ] Show logged-in username on mod portal tab
 - [ ] Refresh button for saved credentials
 - [ ] Proper FSM login (registration form on first launch)
+
+### UI
+
+- [ ] Notifications on server start/stop (WebSocket flash)
+- [ ] Upload save progress bar
+- [ ] Dual logs — Factorio server logs + FSM manager logs in one view
