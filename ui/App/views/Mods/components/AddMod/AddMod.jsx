@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 
 
-const AddMod = ({refetchInstalledMods, fuse}) => {
+const AddMod = ({refetchInstalledMods, fuse, serverId}) => {
     const { t } = useTranslation();
 
     const [isFactorioAuthenticated, setIsFactorioAuthenticated] = useState(false);
@@ -18,7 +18,7 @@ const AddMod = ({refetchInstalledMods, fuse}) => {
     }, []);
 
     return isFactorioAuthenticated
-        ? <AddModForm fuse={fuse} setIsFactorioAuthenticated={setIsFactorioAuthenticated} refetchInstalledMods={refetchInstalledMods}/>
+        ? <AddModForm fuse={fuse} setIsFactorioAuthenticated={setIsFactorioAuthenticated} refetchInstalledMods={refetchInstalledMods} serverId={serverId}/>
         : <FactorioLogin setIsFactorioAuthenticated={setIsFactorioAuthenticated}/>
 }
 

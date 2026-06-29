@@ -5,7 +5,7 @@ import {useForm} from "react-hook-form";
 import modsResource from "../../../../api/resources/mods";
 import { useTranslation } from "react-i18next";
 
-const UploadMod = ({refetchInstalledMods}) => {
+const UploadMod = ({refetchInstalledMods, serverId}) => {
     const { t } = useTranslation();
     const defaultFileName = t('mods.select_file')
     const [fileName, setFileName] = useState(defaultFileName);
@@ -14,7 +14,7 @@ const UploadMod = ({refetchInstalledMods}) => {
 
     const onSubmit = (data, e) => {
         setIsUploading(true)
-        modsResource.upload(data.mod_file[0])
+        modsResource.upload(data.mod_file[0], serverId)
             .then(refetchInstalledMods)
             .finally(() => {
                 e.target.reset()

@@ -21,6 +21,10 @@
     "main_title": "Factorio Server Manager",
     "server_settings": {
         "title": "Настройки сервера",
+        "network_title": "Сеть сервера",
+        "bind_ip": "IP привязки",
+        "port_restart_note": "Изменение порта во время работы потребует перезапуска.",
+        "network_save_error": "Ошибка сохранения сетевых настроек сервера.",
         "admins": "Админы",
         "name": "Название",
         "description": "Описание",
@@ -115,6 +119,20 @@
         "install_factorio": "Установить Factorio",
         "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio»."
     },
+    "servers": {
+        "create": "Создать сервер",
+        "pending_restart": "требуется перезапуск",
+        "manage": "Управлять",
+        "save_now": "Сохранить",
+        "delete": "Удалить сервер",
+        "confirm_delete": "Подтвердить удаление",
+        "cant_start_no_save": "Создайте или загрузите сохранение перед запуском сервера.",
+        "cant_delete_running": "Остановите сервер перед удалением.",
+        "editing": "Редактируется сервер",
+        "server": "Сервер",
+        "id": "ID",
+        "running_summary": "Запущено серверов: {{running}} / {{total}}"
+    },
     "mods": {
         "change_mods_while_running_error_message": "Изменение модов отключено, пока сервер работает!",
         "install_mod": "Установить мод",
@@ -155,7 +173,9 @@
         "status_already_installed": "Уже установлен",
         "status_builtin": "Встроенный / DLC",
         "status_not_found": "Не найден на портале",
-        "status_downloading": "Скачивается..."
+        "status_downloading": "Скачивается...",
+        "mod_options": "Настройки модов",
+        "mod_options_raw_note": "Редактируйте raw base64 содержимое mod-settings.dat для этого сервера."
     },
     "login": {
         "login_failed_message": "Ошибка входа. Неверное имя пользователя или пароль.",
@@ -174,6 +194,9 @@
     },
     "logs": {
         "title": "Логи"
+    },
+    "fsm_logs": {
+        "title": "Логи FSM"
     },
     "help": {
         "title": "Помощь",

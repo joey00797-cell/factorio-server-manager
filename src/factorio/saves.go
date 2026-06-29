@@ -25,8 +25,16 @@ func (s *Save) String() string {
 // Lists save files in factorio/saves
 func ListSaves() (saves []Save, err error) {
 	config := bootstrap.GetConfig()
+	savesDir := config.FactorioSavesDir
+	if manager := GetServerManager(); manager != nil {
+		savesDir = manager.DefaultServer().savesDir()
+	}
+	return ListSavesInDir(savesDir)
+}
+
+func ListSavesInDir(savesDir string) (saves []Save, err error) {
 	saves = []Save{}
-	err = filepath.Walk(config.FactorioSavesDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(savesDir, func(path string, info os.FileInfo, err error) error {
 		if info == nil || (info.IsDir() && info.Name() == "saves") {
 			return nil
 		}
@@ -41,7 +49,16 @@ func ListSaves() (saves []Save, err error) {
 }
 
 func FindSave(name string) (*Save, error) {
-	saves, err := ListSaves()
+	config := bootstrap.GetConfig()
+	savesDir := config.FactorioSavesDir
+	if manager := GetServerManager(); manager != nil {
+		savesDir = manager.DefaultServer().savesDir()
+	}
+	return FindSaveInDir(savesDir, name)
+}
+
+func FindSaveInDir(savesDir, name string) (*Save, error) {
+	saves, err := ListSavesInDir(savesDir)
 	if err != nil {
 		return nil, fmt.Errorf("error listing saves: %v", err)
 	}
@@ -60,11 +77,31 @@ func (s *Save) Remove() error {
 		return errors.New("save name cannot be blank")
 	}
 	config := bootstrap.GetConfig()
-	return os.Remove(filepath.Join(config.FactorioSavesDir, s.Name))
+	savesDir := config.FactorioSavesDir
+	if manager := GetServerManager(); manager != nil {
+		savesDir = manager.DefaultServer().savesDir()
+	}
+	return s.RemoveFromDir(savesDir)
+}
+
+func (s *Save) RemoveFromDir(savesDir string) error {
+	if s.Name == "" {
+		return errors.New("save name cannot be blank")
+	}
+	return os.Remove(filepath.Join(savesDir, s.Name))
 }
 
 // Create savefiles for Factorio
 func CreateSave(filePath string) (string, error) {
+	config := bootstrap.GetConfig()
+	binary := config.FactorioBinary
+	if manager := GetServerManager(); manager != nil {
+		binary = manager.DefaultServer().factorioBinary()
+	}
+	return CreateSaveWithBinary(filePath, binary)
+}
+
+func CreateSaveWithBinary(filePath, binary string) (string, error) {
 	err := os.MkdirAll(filepath.Dir(filePath), 0755)
 	if err != nil {
 		log.Printf("Error in creating Factorio save: %s", err)
@@ -72,8 +109,7 @@ func CreateSave(filePath string) (string, error) {
 	}
 
 	args := []string{"--create", filePath}
-	config := bootstrap.GetConfig()
-	cmdOutput, err := exec.Command(config.FactorioBinary, args...).Output()
+	cmdOutput, err := exec.Command(binary, args...).Output()
 	if err != nil {
 		log.Printf("Error in creating Factorio save: %s", err)
 		log.Println(string(cmdOutput))
@@ -87,8 +123,15 @@ func CreateSave(filePath string) (string, error) {
 
 func GetLatestSave() (save Save, err error) {
 	config := bootstrap.GetConfig()
+	savesDir := config.FactorioSavesDir
+	if manager := GetServerManager(); manager != nil {
+		savesDir = manager.DefaultServer().savesDir()
+	}
+	return GetLatestSaveInDir(savesDir)
+}
 
-	err = filepath.Walk(config.FactorioSavesDir, func(path string, info os.FileInfo, err error) error {
+func GetLatestSaveInDir(savesDir string) (save Save, err error) {
+	err = filepath.Walk(savesDir, func(path string, info os.FileInfo, err error) error {
 		if info == nil || (info.IsDir() && info.Name() == "saves") {
 			return nil
 		}

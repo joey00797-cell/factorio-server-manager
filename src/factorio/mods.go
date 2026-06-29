@@ -25,7 +25,11 @@ type LoginSuccessResponse struct {
 
 func DeleteAllMods() error {
 	config := bootstrap.GetConfig()
-	err := clearModsDir(config.FactorioModsDir)
+	modsDir := config.FactorioModsDir
+	if manager := GetServerManager(); manager != nil {
+		modsDir = manager.DefaultServer().modsDir()
+	}
+	err := clearModsDir(modsDir)
 	if err != nil {
 		log.Printf("Error deleting all mods: %s", err)
 		return err
@@ -33,29 +37,42 @@ func DeleteAllMods() error {
 	return nil
 }
 
+func ClearModsDir(dir string) error {
+	return clearModsDir(dir)
+}
+
 func ModStartUp() {
 	config := bootstrap.GetConfig()
+	factorioDir := config.FactorioDir
+	modsDir := config.FactorioModsDir
+	modPackDir := config.FactorioModPackDir
+	if manager := GetServerManager(); manager != nil {
+		server := manager.DefaultServer()
+		factorioDir = server.Paths.Root
+		modsDir = server.modsDir()
+		modPackDir = server.Paths.ModPackDir
+	}
 	//get main-folder info
-	factorioDirInfo, err := os.Stat(config.FactorioDir)
+	factorioDirInfo, err := os.Stat(factorioDir)
 	if err != nil {
-		log.Printf("error getting stats from FactorioDir %s with error %s", config.FactorioDir, err)
+		log.Printf("error getting stats from FactorioDir %s with error %s", factorioDir, err)
 		return
 	}
 	factorioDirPerm := factorioDirInfo.Mode().Perm()
 
 	//create mods dir
-	if _, err = os.Stat(config.FactorioModsDir); os.IsNotExist(err) {
+	if _, err = os.Stat(modsDir); os.IsNotExist(err) {
 		log.Println("no mods dir found ... creating one ...")
-		os.Mkdir(config.FactorioModsDir, factorioDirPerm)
+		os.Mkdir(modsDir, factorioDirPerm)
 	}
 
 	//crate mod_pack dir
-	if _, err = os.Stat(config.FactorioModPackDir); os.IsNotExist(err) {
+	if _, err = os.Stat(modPackDir); os.IsNotExist(err) {
 		log.Println("no ModPackDir found ... creating one ...")
-		_ = os.Mkdir(config.FactorioModPackDir, factorioDirPerm)
+		_ = os.Mkdir(modPackDir, factorioDirPerm)
 	}
 
-	oldModpackDir := filepath.Join(config.FactorioDir, "modpacks")
+	oldModpackDir := filepath.Join(factorioDir, "modpacks")
 	if _, err := os.Stat(filepath.Join(oldModpackDir)); !os.IsNotExist(err) {
 		log.Printf("found old modpack files, rebuild into new system...")
 
@@ -74,7 +91,7 @@ func ModStartUp() {
 
 			log.Printf("loading modPack %s into new system ...", modPackName)
 
-			modPackDir := filepath.Join(config.FactorioModPackDir, modPackName)
+			modPackDir := filepath.Join(modPackDir, modPackName)
 
 			if _, err := os.Stat(modPackDir); !os.IsNotExist(err) {
 				log.Printf("modPack already exists")

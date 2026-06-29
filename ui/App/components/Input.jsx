@@ -11,7 +11,8 @@ const Input = ({
                    min = undefined,
                    max = undefined,
                    value = undefined,
-                   disabled = false
+                   disabled = false,
+                   onChange = undefined
                }) => {
     return (
         <input
@@ -26,6 +27,7 @@ const Input = ({
             max={max}
             value={value}
             disabled={disabled}
+            onChange={onChange}
         />
     )
 }

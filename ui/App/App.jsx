@@ -6,38 +6,25 @@ import {Navigate, Route, Routes} from "react-router";
 import Controls from "./views/Controls";
 import {BrowserRouter, Outlet} from "react-router-dom";
 import Logs from "./views/Logs";
+import FsmLogs from "./views/FsmLogs";
 import Saves from "./views/Saves/Saves";
 import Layout from "./components/Layout";
-import server from "../api/resources/server";
 import Mods from "./views/Mods/Mods";
 import UserManagement from "./views/UserManagement/UserManagment";
 import ServerSettings from "./views/ServerSettings";
 import GameSettings from "./views/GameSettings";
+import ModOptions from "./views/ModOptions";
 import Console from "./views/Console";
 import Help from "./views/Help";
-import socket from "../api/socket";
 import "./i18n";
-import { useTranslation } from "react-i18next";
-import {Flash} from "./components/Flash";
 
 
 const App = () => {
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [serverStatus, setServerStatus] = useState(null);
-
-
     const handleAuthenticationStatus = useCallback(async (status) => {
         if (status?.username) {
             setIsAuthenticated(true);
-
-            const status = await server.status();
-            setServerStatus(status);
-
-            socket.emit('server status subscribe');
-            socket.on('server_status', status => {
-                setServerStatus(JSON.parse(status));
-            });
         }
     },[]);
 
@@ -62,16 +49,25 @@ const App = () => {
 
                 {/* route with only `element` will cause the proper children to be place in `<Outlet/>` */}
                 <Route element={<ProtectedRoute isAuthenticated={isAuthenticated}/> }>
-                    <Route element={<Layout handleLogout={handleLogout} serverStatus={serverStatus} />}>
-                        <Route index element={<Controls serverStatus={serverStatus}/>}/>
-                        <Route path="saves" element={<Saves serverStatus={serverStatus}/>}/>
-                        <Route path="mods" element={<Mods serverStatus={serverStatus}/>}/>
-                        <Route path="server-settings" element={<ServerSettings serverStatus={serverStatus}/>}/>
-                        <Route path="game-settings" element={<GameSettings serverStatus={serverStatus}/>}/>
-                        <Route path="console" element={<Console serverStatus={serverStatus}/>}/>
-                        <Route path="logs" element={<Logs serverStatus={serverStatus}/>}/>
-                        <Route path="user-management" element={<UserManagement serverStatus={serverStatus}/>}/>
-                        <Route path="help" element={<Help serverStatus={serverStatus}/>}/>
+                    <Route element={<Layout handleLogout={handleLogout} />}>
+                        <Route index element={<Controls/>}/>
+                        <Route path="saves" element={<Navigate to="/servers/1/saves" replace/>}/>
+                        <Route path="mods" element={<Navigate to="/servers/1/mods" replace/>}/>
+                        <Route path="server-settings" element={<Navigate to="/servers/1/server-settings" replace/>}/>
+                        <Route path="game-settings" element={<Navigate to="/servers/1/game-settings" replace/>}/>
+                        <Route path="mod-options" element={<Navigate to="/servers/1/mod-options" replace/>}/>
+                        <Route path="console" element={<Navigate to="/servers/1/console" replace/>}/>
+                        <Route path="logs" element={<Navigate to="/servers/1/logs" replace/>}/>
+                        <Route path="servers/:serverId/saves" element={<Saves/>}/>
+                        <Route path="servers/:serverId/mods" element={<Mods/>}/>
+                        <Route path="servers/:serverId/server-settings" element={<ServerSettings/>}/>
+                        <Route path="servers/:serverId/game-settings" element={<GameSettings/>}/>
+                        <Route path="servers/:serverId/mod-options" element={<ModOptions/>}/>
+                        <Route path="servers/:serverId/console" element={<Console/>}/>
+                        <Route path="servers/:serverId/logs" element={<Logs/>}/>
+                        <Route path="fsm-logs" element={<FsmLogs/>}/>
+                        <Route path="user-management" element={<UserManagement/>}/>
+                        <Route path="help" element={<Help/>}/>
                     </Route>
                 </Route>
             </Routes>

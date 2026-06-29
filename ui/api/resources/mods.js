@@ -1,46 +1,59 @@
 import client from "../client";
 
+const base = serverId => serverId ? `/api/servers/${serverId}/mods` : '/api/mods';
+const savesBase = serverId => serverId ? `/api/servers/${serverId}/saves` : '/api/saves';
+
 const mods = {
-    installed: async () => {
-        const response = await client.get('/api/mods/list');
+    installed: async (serverId) => {
+        const response = await client.get(`${base(serverId)}/list`);
         return response.data;
     },
-    toggle: async name => {
-        const response = await client.post('/api/mods/toggle', {name});
+    toggle: async (name, serverId) => {
+        const response = await client.post(`${base(serverId)}/toggle`, {name});
         return response.data;
     },
-    delete: async name => {
-        const response = await client.post('/api/mods/delete', {name});
+    delete: async (name, serverId) => {
+        const response = await client.post(`${base(serverId)}/delete`, {name});
         return response.data;
     },
-    update: async ({modName, downloadUrl, fileName}) => {
-        const response = await client.post('/api/mods/update', {modName, downloadUrl, fileName})
+    update: async ({modName, downloadUrl, fileName}, serverId) => {
+        const response = await client.post(`${base(serverId)}/update`, {modName, downloadUrl, fileName})
         return response.data;
     },
-    upload: async file => {
+    upload: async (file, serverId) => {
         let formData = new FormData();
         formData.append("mod_file", file);
 
-        const response = await client.post('/api/mods/upload', formData, {
+        const response = await client.post(`${base(serverId)}/upload`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data"
             }
         });
         return response.data;
     },
-    deleteAll: async () => {
-        const response = await client.post('/api/mods/delete/all');
+    deleteAll: async (serverId) => {
+        const response = await client.post(`${base(serverId)}/delete/all`);
         return response.data;
     },
-    getFromSave: async saveFile => {
-        const response = await client.post('/api/saves/mods/list', {saveFile});
+    getFromSave: async (saveFile, serverId) => {
+        const response = await client.post(`${savesBase(serverId)}/mods/list`, {saveFile});
         return response.data;
     },
-    syncFromSave: async (saveFile, modNames) => {
-        const response = await client.post('/api/saves/mods/sync', {saveFile, modNames});
+    syncFromSave: async (saveFile, modNames, serverId) => {
+        const response = await client.post(`${savesBase(serverId)}/mods/sync`, {saveFile, modNames});
         return response.data;
     },
-    downloadAllURL: '/api/mods/download',
+    downloadAllURL: serverId => `${base(serverId)}/download`,
+    modSettings: {
+        get: async (serverId) => {
+            const response = await client.get(`/api/servers/${serverId}/mod-settings`);
+            return response.data;
+        },
+        update: async (serverId, data) => {
+            const response = await client.post(`/api/servers/${serverId}/mod-settings`, data);
+            return response.data;
+        }
+    },
     portal: {
         login: async (username, token) => {
             const response = await client.post('/api/mods/portal/login', {
@@ -57,12 +70,12 @@ const mods = {
             const response = await client.get('/api/mods/portal/logout');
             return response.data
         },
-        installMultiple: async mods => {
-            const response = await client.post('/api/mods/portal/install/multiple', mods);
+        installMultiple: async (mods, serverId) => {
+            const response = await client.post(serverId ? `/api/servers/${serverId}/mods/portal/install/multiple` : '/api/mods/portal/install/multiple', mods);
             return response.data
         },
-        install: async (downloadUrl, fileName, modName) => {
-            const response = await client.post('/api/mods/portal/install', {
+        install: async (downloadUrl, fileName, modName, serverId) => {
+            const response = await client.post(serverId ? `/api/servers/${serverId}/mods/portal/install` : '/api/mods/portal/install', {
                 downloadUrl,
                 fileName,
                 modName

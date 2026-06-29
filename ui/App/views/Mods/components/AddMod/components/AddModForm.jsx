@@ -15,7 +15,7 @@ const LinkModPortal = () => {
         Portal <FontAwesomeIcon icon={faExternalLinkAlt}/></a>
 }
 
-const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) => {
+const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods, serverId}) => {
     const { t } = useTranslation();
     const {register, watch, setValue, handleSubmit} = useForm();
     const [suggestedMods, setSuggestedMods] = useState([]);
@@ -66,7 +66,7 @@ const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) =>
 
     const install = async release => {
         return modsResource.portal
-            .install(release.download_url, release.file_name, selectedMod.item.name)
+            .install(release.download_url, release.file_name, selectedMod.item.name, serverId)
             .then(refetchInstalledMods)
     }
 

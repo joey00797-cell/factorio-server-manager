@@ -9,6 +9,7 @@ services:
       - "RCON_PASS"
     volumes:
       - "./fsm-data:/opt/fsm-data"
+      - "./factorio-server:/opt/factorio-server"
       - "./factorio-data/saves:/opt/factorio/saves"
       - "./factorio-data/mods:/opt/factorio/mods"
       - "./factorio-data/config:/opt/factorio/config"

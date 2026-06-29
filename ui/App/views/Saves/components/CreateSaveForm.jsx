@@ -7,14 +7,14 @@ import Input from "../../../components/Input";
 import Error from "../../../components/Error";
 import { useTranslation } from "react-i18next";
 
-const CreateSaveForm = ({onSuccess}) => {
+const CreateSaveForm = ({onSuccess, serverId}) => {
     const { t } = useTranslation();
     const {register, handleSubmit, formState: {errors}} = useForm();
     const [isLoading, setIsLoading] = useState(false);
 
     const onSubmit = async (data, e) => {
         setIsLoading(true)
-        saves.create(data.savefile)
+        saves.create(data.savefile, serverId)
             .then(() => {
                 e.target.reset();
                 onSuccess();

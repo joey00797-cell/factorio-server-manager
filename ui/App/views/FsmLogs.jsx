@@ -1,16 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import log from "../../api/resources/log";
 import Panel from "../components/Panel";
-import { useTranslation } from "react-i18next";
-import {useParams} from "react-router-dom";
-import ServerScopeHeader from "../components/ServerScopeHeader";
+import {useTranslation} from "react-i18next";
 
 const POLL_INTERVAL_MS = 2000;
 
-const Logs = () => {
+const FsmLogs = () => {
     const { t } = useTranslation();
-    const {serverId} = useParams();
-
     const [logs, setLogs] = useState([]);
     const logContainerRef = useRef(null);
     const bottomRef = useRef(null);
@@ -34,12 +30,12 @@ const Logs = () => {
             }
             inFlight = true;
             try {
-                const lines = await log.tail(serverId);
+                const lines = await log.fsmTail();
                 if (!cancelled) {
-                    setLogs(Array.isArray(lines) ? lines : []);
+                    setLogs(lines || []);
                 }
             } catch (err) {
-                console.error("Error refreshing server logs", err);
+                console.error("Error refreshing FSM logs", err);
             } finally {
                 inFlight = false;
             }
@@ -51,31 +47,28 @@ const Logs = () => {
             cancelled = true;
             clearInterval(interval);
         };
-    }, [serverId]);
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
     }, [logs, scrollToBottom]);
 
     return (
-        <>
-            <ServerScopeHeader/>
-            <Panel
-                title={t("logs.title")}
-                content={
-                    <div
-                        ref={logContainerRef}
-                        className="max-h-[70vh] overflow-y-auto"
-                    >
-                        <pre className="whitespace-pre-wrap font-mono text-sm">
-                            {logs.join("\n")}
-                        </pre>
-                        <div ref={bottomRef}/>
-                    </div>
-                }
-            />
-        </>
+        <Panel
+            title={t("fsm_logs.title", "FSM Logs")}
+            content={
+                <div
+                    ref={logContainerRef}
+                    className="max-h-[70vh] overflow-y-auto"
+                >
+                    <pre className="whitespace-pre-wrap font-mono text-sm">
+                        {logs.join("\n")}
+                    </pre>
+                    <div ref={bottomRef}/>
+                </div>
+            }
+        />
     );
-}
+};
 
-export default Logs;
+export default FsmLogs;

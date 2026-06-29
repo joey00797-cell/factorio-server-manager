@@ -31,7 +31,7 @@ const STATUS_TEXT = (t) => ({
     not_found:     t("mods.status_not_found"),
 });
 
-const LoadMods = ({refreshMods}) => {
+const LoadMods = ({refreshMods, serverId}) => {
     const {t} = useTranslation();
     const [saves, setSaves] = useState([]);
     const [selectedSave, setSelectedSave] = useState("");
@@ -48,7 +48,7 @@ const LoadMods = ({refreshMods}) => {
     useEffect(() => {
         (async () => {
             setIsFactorioAuthenticated(await modsResource.portal.status());
-            const s = await savesResource.list();
+            const s = await savesResource.list(false, serverId);
             setSaves(s);
             if (s.length > 0) {
                 setIsDisabled(false);
@@ -81,13 +81,14 @@ const LoadMods = ({refreshMods}) => {
             }
         };
 
-        socket.on('mods_sync', handler);
-        socket.emit('mods sync subscribe');
+        const room = serverId ? `servers:${serverId}:mods_sync` : 'mods_sync';
+        socket.on(room, handler);
+        socket.emit('mods sync subscribe', serverId);
         return () => {
-            socket.off('mods_sync', handler);
-            socket.emit('mods sync unsubscribe');
+            socket.off(room, handler);
+            socket.emit('mods sync unsubscribe', serverId);
         };
-    }, []);
+    }, [serverId]);
 
     const onReadSave = async () => {
         if (!selectedSave) return;
@@ -98,7 +99,7 @@ const LoadMods = ({refreshMods}) => {
         setWarning(null);
 
         try {
-            const mods = await modsResource.getFromSave(selectedSave);
+            const mods = await modsResource.getFromSave(selectedSave, serverId);
             setModRows(mods || []);
             // По умолчанию отмечаем missing и wrong_version
             const checked = {};
@@ -125,7 +126,7 @@ const LoadMods = ({refreshMods}) => {
         setSyncError(null);
         try {
             const selectedModNames = Object.keys(checkedMods).filter(k => checkedMods[k]);
-            await modsResource.syncFromSave(selectedSave, selectedModNames);
+            await modsResource.syncFromSave(selectedSave, selectedModNames, serverId);
         } catch(e) {
             setIsSyncing(false);
             setSyncError("Failed to start sync: " + e.message);
