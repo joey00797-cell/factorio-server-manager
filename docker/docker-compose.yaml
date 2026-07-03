@@ -9,11 +9,8 @@ services:
       - "RCON_PASS"
     volumes:
       - "./fsm-data:/opt/fsm-data"
+      # Managed servers, saves, mods, and downloaded versions live here.
       - "./factorio-server:/opt/factorio-server"
-      - "./factorio-data/saves:/opt/factorio/saves"
-      - "./factorio-data/mods:/opt/factorio/mods"
-      - "./factorio-data/config:/opt/factorio/config"
-      - "./factorio-data/mod_packs:/opt/fsm/mod_packs"
     labels:
       - "traefik.enable=true"
 

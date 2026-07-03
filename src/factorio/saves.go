@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
@@ -34,18 +36,52 @@ func ListSaves() (saves []Save, err error) {
 
 func ListSavesInDir(savesDir string) (saves []Save, err error) {
 	saves = []Save{}
-	err = filepath.Walk(savesDir, func(path string, info os.FileInfo, err error) error {
-		if info == nil || (info.IsDir() && info.Name() == "saves") {
-			return nil
+	entries, err := os.ReadDir(savesDir)
+	if os.IsNotExist(err) {
+		return saves, nil
+	}
+	if err != nil {
+		return saves, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if _, err := ValidateSaveName(name); err != nil {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return saves, err
 		}
 		saves = append(saves, Save{
-			info.Name(),
+			name,
 			info.ModTime(),
 			info.Size(),
 		})
-		return nil
+	}
+
+	sort.Slice(saves, func(i, j int) bool {
+		if saves[i].LastMod.Equal(saves[j].LastMod) {
+			return saves[i].Name < saves[j].Name
+		}
+		return saves[i].LastMod.After(saves[j].LastMod)
 	})
-	return
+
+	return saves, nil
+}
+
+func ListSavesWithLatestInDir(savesDir string) ([]Save, error) {
+	saves, err := ListSavesInDir(savesDir)
+	if err != nil || len(saves) == 0 {
+		return saves, err
+	}
+
+	latestSave := saves[0]
+	latestSave.Name = fmt.Sprintf("Load Latest (%s)", latestSave.Name)
+	return append([]Save{latestSave}, saves...), nil
 }
 
 func FindSave(name string) (*Save, error) {
@@ -58,6 +94,11 @@ func FindSave(name string) (*Save, error) {
 }
 
 func FindSaveInDir(savesDir, name string) (*Save, error) {
+	name, err := ValidateSaveName(name)
+	if err != nil {
+		return nil, err
+	}
+
 	saves, err := ListSavesInDir(savesDir)
 	if err != nil {
 		return nil, fmt.Errorf("error listing saves: %v", err)
@@ -85,10 +126,11 @@ func (s *Save) Remove() error {
 }
 
 func (s *Save) RemoveFromDir(savesDir string) error {
-	if s.Name == "" {
-		return errors.New("save name cannot be blank")
+	savePath, err := SavePathInDir(savesDir, s.Name)
+	if err != nil {
+		return err
 	}
-	return os.Remove(filepath.Join(savesDir, s.Name))
+	return os.Remove(savePath)
 }
 
 // Create savefiles for Factorio
@@ -131,20 +173,54 @@ func GetLatestSave() (save Save, err error) {
 }
 
 func GetLatestSaveInDir(savesDir string) (save Save, err error) {
-	err = filepath.Walk(savesDir, func(path string, info os.FileInfo, err error) error {
-		if info == nil || (info.IsDir() && info.Name() == "saves") {
-			return nil
-		}
-
-		if save.LastMod.Before(info.ModTime()) {
-			save = Save{
-				Name:    info.Name(),
-				LastMod: info.ModTime(),
-				Size:    info.Size(),
-			}
-		}
-		return nil
-	})
+	saves, err := ListSavesInDir(savesDir)
+	if err != nil || len(saves) == 0 {
+		return save, err
+	}
+	save = saves[0]
 
 	return
+}
+
+func ValidateSaveName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", errors.New("save name cannot be blank")
+	}
+	if strings.HasPrefix(name, "Load Latest") {
+		return "", errors.New("load latest is not a save file name")
+	}
+	if filepath.IsAbs(name) || strings.ContainsAny(name, `/\`) || name == "." || name == ".." {
+		return "", fmt.Errorf("invalid save name %q", name)
+	}
+	if !strings.EqualFold(filepath.Ext(name), ".zip") {
+		return "", fmt.Errorf("save name must end with .zip")
+	}
+	if strings.TrimSuffix(name, filepath.Ext(name)) == "" {
+		return "", errors.New("save name cannot be blank")
+	}
+	return name, nil
+}
+
+func SavePathInDir(savesDir, name string) (string, error) {
+	name, err := ValidateSaveName(name)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(savesDir, name), nil
+}
+
+func SavePathForCreateInDir(savesDir, name string) (string, string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", "", errors.New("save name cannot be blank")
+	}
+	if filepath.Ext(name) == "" {
+		name += ".zip"
+	}
+	name, err := ValidateSaveName(name)
+	if err != nil {
+		return "", "", err
+	}
+	return filepath.Join(savesDir, name), name, nil
 }

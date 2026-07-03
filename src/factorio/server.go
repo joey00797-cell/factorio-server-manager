@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -102,7 +103,6 @@ func NewFactorioServer() (err error) {
 	settingsPath := config.SettingsFile
 	var settings *os.File
 
-	
 	if _, err = os.Stat(settingsPath); os.IsNotExist(err) {
 		log.Printf("server-settings.json not found\t\tloading default config")
 
@@ -292,7 +292,12 @@ func (server *Server) Run() error {
 	if strings.HasPrefix(server.Savefile, "Load Latest") {
 		args = append(args, "--start-server-load-latest")
 	} else {
-		args = append(args, "--start-server", filepath.Join(savesDir, server.Savefile))
+		save, err := FindSaveInDir(savesDir, server.Savefile)
+		if err != nil {
+			return fmt.Errorf("invalid savefile %q: %w", server.Savefile, err)
+		}
+		server.Savefile = save.Name
+		args = append(args, "--start-server", filepath.Join(savesDir, save.Name))
 	}
 
 	// Write chat log to a different file if requested (if not it will be mixed-in with the default logfile)

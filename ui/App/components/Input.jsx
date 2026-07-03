@@ -14,11 +14,13 @@ const Input = ({
                    disabled = false,
                    onChange = undefined
                }) => {
+    const registeredProps = name && register ? register(name) : (register || {});
+
     return (
         <input
             className="shadow appearance-none border w-full py-2 px-3 text-black"
             placeholder={placeholder}
-            {...(name && register ? register(name) : (register || {}))}
+            {...registeredProps}
             type={type}
             onKeyDown={onKeyDown}
             autoComplete={hasAutoComplete ? "on" : "off"}
@@ -27,7 +29,7 @@ const Input = ({
             max={max}
             value={value}
             disabled={disabled}
-            onChange={onChange}
+            {...(onChange ? {onChange} : {})}
         />
     )
 }

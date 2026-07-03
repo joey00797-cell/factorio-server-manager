@@ -122,18 +122,14 @@ func ListSaves(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get actual latest and add name
-	// but only if requested
-	if withLatest && len(savesList) != 0 {
-		latestSave, err := factorio.GetLatestSaveInDir(savesDir)
+	if withLatest {
+		savesList, err = factorio.ListSavesWithLatestInDir(savesDir)
 		if err != nil {
-			resp = fmt.Sprintf("Error getting latest save: %s", err)
+			resp = fmt.Sprintf("Error listing save files: %s", err)
 			log.Println(resp)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		latestSave.Name = fmt.Sprintf("Load Latest (%s)", latestSave.Name)
-		savesList = append(savesList, latestSave)
 	}
 
 	resp = savesList
@@ -148,9 +144,13 @@ func DLSave(w http.ResponseWriter, r *http.Request) {
 	}
 	vars := mux.Vars(r)
 	save := vars["save"]
-	saveName := filepath.Join(serverSavesDir(server), save)
+	saveName, err := factorio.SavePathInDir(serverSavesDir(server), save)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid save name: %s", err), http.StatusBadRequest)
+		return
+	}
 
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", save))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(saveName)))
 	log.Printf("%s downloading: %s", r.Host, saveName)
 
 	http.ServeFile(w, r, saveName)
@@ -175,7 +175,7 @@ func UploadSave(w http.ResponseWriter, r *http.Request) {
 
 	for _, saveFile := range r.MultipartForm.File["savefile"] {
 		ext := filepath.Ext(saveFile.Filename)
-		if ext != ".zip" {
+		if !strings.EqualFold(ext, ".zip") {
 			// Only zip-files allowed
 			resp = fmt.Sprintf("Fileformat {%s} is not allowed", ext)
 			w.WriteHeader(http.StatusUnsupportedMediaType)
@@ -191,7 +191,19 @@ func UploadSave(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		out, err := os.Create(filepath.Join(serverSavesDir(server), saveFile.Filename))
+		savesDir := serverSavesDir(server)
+		savePath, err := factorio.SavePathInDir(savesDir, saveFile.Filename)
+		if err != nil {
+			resp = fmt.Sprintf("Invalid save filename {%s}: %s", saveFile.Filename, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err := os.MkdirAll(savesDir, 0755); err != nil {
+			resp = fmt.Sprintf("Error creating saves directory: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		out, err := os.Create(savePath)
 		if err != nil {
 			resp = fmt.Sprintf("Error creating new savefile to copy uploaded on to: %s", err)
 			log.Println(resp)
@@ -287,7 +299,13 @@ func CreateSaveHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	saveFile := filepath.Join(serverSavesDir(server), saveName)
+	saveFile, saveName, err := factorio.SavePathForCreateInDir(serverSavesDir(server), saveName)
+	if err != nil {
+		resp = fmt.Sprintf("Invalid save filename {%s}: %s", saveName, err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	cmdOut, err := factorio.CreateSaveWithBinary(saveFile, serverBinary(server))
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
@@ -474,6 +492,16 @@ func StartServer(w http.ResponseWriter, r *http.Request) {
 		log.Println(resp)
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+	if !strings.HasPrefix(server.Savefile, "Load Latest") {
+		save, err := factorio.FindSaveInDir(serverSavesDir(server), server.Savefile)
+		if err != nil {
+			resp = fmt.Sprintf("Error starting Factorio server: invalid save file {%s}: %s", server.Savefile, err)
+			log.Println(resp)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		server.Savefile = save.Name
 	}
 
 	go func() {
@@ -1042,7 +1070,6 @@ func InstallFactorio(w http.ResponseWriter, r *http.Request) {
 	resp = fmt.Sprintf("Factorio %s installed successfully", installedVersion)
 	log.Println(resp)
 }
-
 
 // GetInstallStatus returns current Factorio installation status
 func GetInstallStatus(w http.ResponseWriter, r *http.Request) {

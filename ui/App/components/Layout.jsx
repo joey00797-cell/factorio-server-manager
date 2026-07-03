@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useState} from "react";
 import {NavLink, Outlet, useParams} from "react-router-dom";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -6,12 +6,9 @@ import {faBars} from "@fortawesome/free-solid-svg-icons";
 import {Flash} from "./Flash";
 import ChangeLangDialog from "./ChangeLangDialog";
 import { useTranslation } from "react-i18next";
-import serverApi from "../../api/resources/server";
-import socket from "../../api/socket";
+import {ServersProvider, useServers} from "../context/ServersContext";
 
-const SERVER_REFRESH_INTERVAL_MS = 10000;
-
-const Layout = ({handleLogout}) => {
+const LayoutContent = ({handleLogout}) => {
 
     const { t, i18n } = useTranslation();
     const {serverId} = useParams();
@@ -19,55 +16,9 @@ const Layout = ({handleLogout}) => {
 
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
     const [isChangingLang, setIsChangingLang] = useState(false);
-    const [servers, setServers] = useState([]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const refreshServers = async () => {
-            try {
-                const response = await serverApi.list();
-                if (!cancelled) {
-                    setServers(response || []);
-                }
-            } catch (err) {
-                console.error("Error loading server summary", err);
-            }
-        };
-
-        const handleServerUpdate = message => {
-            try {
-                const updatedServer = typeof message === "string" ? JSON.parse(message) : message;
-                if (!updatedServer || !updatedServer.id) {
-                    refreshServers();
-                    return;
-                }
-                setServers(previous => {
-                    const index = previous.findIndex(server => server.id === updatedServer.id);
-                    if (index === -1) {
-                        return [...previous, updatedServer];
-                    }
-                    return previous.map(server => server.id === updatedServer.id ? {...server, ...updatedServer} : server);
-                });
-            } catch (err) {
-                console.error("Error handling server status update", err);
-            }
-        };
-
-        refreshServers();
-        socket.emit('servers subscribe');
-        socket.on('servers', handleServerUpdate);
-        const interval = setInterval(refreshServers, SERVER_REFRESH_INTERVAL_MS);
-
-        return () => {
-            cancelled = true;
-            clearInterval(interval);
-            socket.off('servers', handleServerUpdate);
-            socket.emit('servers unsubscribe');
-        };
-    }, []);
 
     const FleetStatus = () => {
+        const {servers} = useServers();
         const runningCount = servers.filter(server => server.running).length;
         const totalCount = servers.length;
         let color = 'gray-light';
@@ -171,5 +122,11 @@ const Layout = ({handleLogout}) => {
         </>
     );
 }
+
+const Layout = ({handleLogout}) => (
+    <ServersProvider>
+        <LayoutContent handleLogout={handleLogout}/>
+    </ServersProvider>
+);
 
 export default Layout;

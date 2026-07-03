@@ -39,6 +39,12 @@ By default container will download the latest version of factorio. If you want t
 the value of `FACTORIO_VERSION=latest` variable in the `docker-compose.yaml` file.
 Any version can be used. Using `latest` will download the newest beta version. Using `stable` will download the newest stable version.
 
+### Managed server data
+
+Managed Factorio versions, server instances, saves, mods, and logs are stored under `/opt/factorio-server`. In the provided compose files this is persisted with `./factorio-server:/opt/factorio-server`.
+
+Each server owns its save files in `/opt/factorio-server/instances/{server_id}/saves`. The old global `/opt/factorio/saves` path is only used as legacy input during migration into server `1`.
+
 ## Accessing the application
 
 Go to the domain specified in your `.env` file in your web browser. If running on localhost access the application at http://localhost

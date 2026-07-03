@@ -380,7 +380,13 @@ func LoadModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	path := filepath.Join(serverSavesDir(server), saveFileStruct.Name)
+	path, err := factorio.SavePathInDir(serverSavesDir(server), saveFileStruct.Name)
+	if err != nil {
+		resp = fmt.Sprintf("invalid save file: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	f, err := factorio.OpenArchiveFile(path, "level.dat", "level-init.dat")
 	if err != nil {
@@ -437,7 +443,12 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	savePath := filepath.Join(serverSavesDir(server), syncRequest.Name)
+	savePath, err := factorio.SavePathInDir(serverSavesDir(server), syncRequest.Name)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		resp = fmt.Sprintf("invalid save file: %s", err)
+		return
+	}
 
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -469,7 +480,12 @@ func GetModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	savePath := filepath.Join(serverSavesDir(server), saveFileStruct.Name)
+	savePath, err := factorio.SavePathInDir(serverSavesDir(server), saveFileStruct.Name)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		resp = fmt.Sprintf("invalid save file: %s", err)
+		return
+	}
 
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
 		w.WriteHeader(http.StatusBadRequest)

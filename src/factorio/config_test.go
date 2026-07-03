@@ -83,3 +83,30 @@ locale = auto
 		t.Fatalf("config still contains Factorio-unsafe path data:\n%s", content)
 	}
 }
+
+func TestEnsureInstanceFilesCreatesOwnedSaveDirAndWriteData(t *testing.T) {
+	tempDir := t.TempDir()
+	paths := buildInstancePaths(
+		filepath.Join(tempDir, "instances", "7"),
+		filepath.Join(tempDir, "versions", "2.0.77"),
+	)
+
+	if err := EnsureInstanceFiles(paths); err != nil {
+		t.Fatalf("EnsureInstanceFiles returned error: %s", err)
+	}
+
+	if info, err := os.Stat(paths.SavesDir); err != nil || !info.IsDir() {
+		t.Fatalf("expected owned saves directory at %s, stat err: %v", paths.SavesDir, err)
+	}
+
+	config, err := LoadConfig(paths.ConfigFile)
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %s", err)
+	}
+	if got := config["path"]["write-data"]; got != paths.Root {
+		t.Fatalf("expected write-data %q, got %q", paths.Root, got)
+	}
+	if got := config["path"]["read-data"]; got != filepath.Join(paths.VersionDir, "data") {
+		t.Fatalf("expected read-data for server version, got %q", got)
+	}
+}

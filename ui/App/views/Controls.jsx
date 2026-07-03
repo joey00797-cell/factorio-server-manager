@@ -1,10 +1,11 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
 import Panel from "../components/Panel";
 import Button from "../components/Button";
 import serverResource from "../../api/resources/server";
 import savesResource from "../../api/resources/saves";
 import {useTranslation} from "react-i18next";
+import {useServers} from "../context/ServersContext";
 
 const emptyCreate = {
     name: "",
@@ -14,36 +15,45 @@ const emptyCreate = {
     autostart: false,
 };
 
+const SAVE_REFRESH_DELAYS_MS = [1200, 3500];
+const STOP_RECONCILE_TIMEOUT_MS = 20000;
+
 const Controls = () => {
     const { t } = useTranslation();
-    const [servers, setServers] = useState([]);
+    const {servers, refreshServers, refreshServerUntil} = useServers();
     const [availableVersions, setAvailableVersions] = useState({});
     const [createForm, setCreateForm] = useState(emptyCreate);
     const [savesByServer, setSavesByServer] = useState({});
     const [selectedSaveByServer, setSelectedSaveByServer] = useState({});
     const [busy, setBusy] = useState({});
 
-    const fetchServers = async () => {
-        const data = await serverResource.list();
-        setServers(data || []);
-        (data || []).forEach(loadSaves);
-    };
+    const serverIdsKey = useMemo(() => servers.map(server => server.id).join(","), [servers]);
 
-    const loadSaves = async (srv) => {
-        if (!srv?.id) return;
-        const saves = await savesResource.list(true, srv.id);
-        setSavesByServer(prev => ({...prev, [srv.id]: saves || []}));
+    const loadSaves = useCallback(async (srv) => {
+        const serverId = typeof srv === "object" ? srv?.id : srv;
+        if (!serverId) return [];
+
+        const saves = await savesResource.list(true, serverId);
+        setSavesByServer(prev => ({...prev, [serverId]: saves || []}));
         setSelectedSaveByServer(prev => {
-            if (prev[srv.id]) return prev;
+            const names = new Set((saves || []).map(save => save.name));
+            if (prev[serverId] && names.has(prev[serverId])) return prev;
             const latest = (saves || []).find(save => save.name.startsWith("Load Latest"));
-            return {...prev, [srv.id]: latest?.name || saves?.[0]?.name || ""};
+            return {...prev, [serverId]: latest?.name || saves?.[0]?.name || ""};
         });
-    };
+        return saves || [];
+    }, []);
 
     useEffect(() => {
-        fetchServers();
+        refreshServers().catch(err => console.error("Error loading servers", err));
         serverResource.availableVersions().then(setAvailableVersions).catch(() => {});
-    }, []);
+    }, [refreshServers]);
+
+    useEffect(() => {
+        servers.forEach(server => {
+            loadSaves(server).catch(err => console.error("Error loading saves", err));
+        });
+    }, [serverIdsKey, loadSaves]);
 
     const versionLabel = (type) => {
         const v = availableVersions?.[type]?.headless;
@@ -54,11 +64,44 @@ const Controls = () => {
         setBusy(prev => ({...prev, [`${id}:${action}`]: value}));
     };
 
+    const scheduleSaveRefresh = useCallback(srv => {
+        SAVE_REFRESH_DELAYS_MS.forEach(delay => {
+            setTimeout(() => {
+                loadSaves(srv).catch(err => console.error("Error refreshing saves", err));
+            }, delay);
+        });
+    }, [loadSaves]);
+
+    const reconcileAfterAction = async (srv, action) => {
+        if (action === "save") {
+            await loadSaves(srv);
+            scheduleSaveRefresh(srv);
+            return;
+        }
+
+        if (action === "stop" || action === "kill") {
+            await refreshServerUntil(
+                srv.id,
+                server => !!server && !server.running,
+                {timeoutMs: STOP_RECONCILE_TIMEOUT_MS}
+            );
+            await refreshServers();
+            await loadSaves(srv);
+            return;
+        }
+
+        await refreshServers();
+
+        if (action === "start") {
+            await loadSaves(srv);
+        }
+    };
+
     const runAction = async (srv, action, fn) => {
         setBusyFor(srv.id, action, true);
         try {
             await fn();
-            await fetchServers();
+            await reconcileAfterAction(srv, action);
         } finally {
             setBusyFor(srv.id, action, false);
         }
@@ -72,7 +115,7 @@ const Controls = () => {
         };
         await serverResource.create(payload);
         setCreateForm(emptyCreate);
-        await fetchServers();
+        await refreshServers();
     };
 
     return (
@@ -193,7 +236,9 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                         disabled={noSave}
                         onChange={e => setSelectedSave(e.target.value)}
                     >
-                        {saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
+                        {noSave
+                            ? <option value="">{t("saves.empty", "No saves for this server yet.")}</option>
+                            : saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
                     </select>
                 </div>
             )}

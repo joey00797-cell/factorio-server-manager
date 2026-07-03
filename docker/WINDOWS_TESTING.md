@@ -44,7 +44,7 @@ This removes the containers and named volumes, including managed servers and dow
 2. Confirm the migrated/default server appears as server `1`.
 3. Install or select a Factorio version from the UI flow.
 4. Create server `2`.
-5. Create or upload saves for each server.
+5. Create or upload saves for each server and confirm each server only lists its own saves.
 6. Start both servers on different UDP ports in the mapped `34197-34205` range.
 7. Use the server card `Save` action and confirm the server keeps running.
 8. Stop one server and confirm the other remains running.

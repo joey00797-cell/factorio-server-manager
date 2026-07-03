@@ -76,6 +76,13 @@ const Saves = () => {
                             </tr>
                             </thead>
                             <tbody>
+                            {saves.length === 0 && (
+                                <tr>
+                                    <td className="py-4 text-gray-light" colSpan="4">
+                                        {t("saves.empty", "No saves for this server yet.")}
+                                    </td>
+                                </tr>
+                            )}
                             {saves.map(save =>
                                 <tr className="py-2 md:py-1 hover:glow-orange hover:bg-orange hover:text-black cursor-pointer" key={save.name}>
                                     <td className="pr-4">{save.name}</td>
