@@ -174,6 +174,12 @@ var apiRoutes = Routes{
 		CreateServerHandler,
 		false,
 	}, {
+		"PreviewNextServer",
+		"GET",
+		"/servers/next",
+		PreviewNextServerHandler,
+		false,
+	}, {
 		"GetServer",
 		"GET",
 		"/servers/{serverID}",
@@ -485,6 +491,24 @@ var apiRoutes = Routes{
 		"GET",
 		"/versions",
 		AvailableVersions,
+		false,
+	}, {
+		"InstalledVersions",
+		"GET",
+		"/versions/installed",
+		InstalledVersionsHandler,
+		false,
+	}, {
+		"DownloadedVersions",
+		"GET",
+		"/versions/downloaded",
+		DownloadedVersionsHandler,
+		false,
+	}, {
+		"DeleteDownload",
+		"DELETE",
+		"/versions/downloaded/{version}",
+		DeleteDownloadHandler,
 		false,
 	}, {
 		"InstallVersion",

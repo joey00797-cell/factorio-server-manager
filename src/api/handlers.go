@@ -1041,6 +1041,48 @@ func AvailableVersions(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+func DownloadedVersionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	manager := factorio.GetServerManager()
+	if manager == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"server manager not initialized"}`))
+		return
+	}
+	versions := manager.ListDownloadedVersions()
+	json.NewEncoder(w).Encode(map[string]interface{}{"versions": versions})
+}
+
+func DeleteDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	manager := factorio.GetServerManager()
+	if manager == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"server manager not initialized"}`))
+		return
+	}
+	vars := mux.Vars(r)
+	version := vars["version"]
+	if err := manager.DeleteDownload(version); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf(`{"error":%q}`, err.Error())))
+		return
+	}
+	w.Write([]byte(`{"ok":true}`))
+}
+
+func InstalledVersionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	manager := factorio.GetServerManager()
+	if manager == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"server manager not initialized"}`))
+		return
+	}
+	versions := manager.ListInstalledVersions()
+	json.NewEncoder(w).Encode(map[string]interface{}{"versions": versions})
+}
+
 func InstallFactorio(w http.ResponseWriter, r *http.Request) {
 	var resp interface{}
 	defer func() { WriteResponse(w, resp) }()

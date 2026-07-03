@@ -9,11 +9,11 @@ import Logs from "./views/Logs";
 import FsmLogs from "./views/FsmLogs";
 import Saves from "./views/Saves/Saves";
 import Layout from "./components/Layout";
+import RedirectToServerScoped from "./components/RedirectToServerScoped";
 import Mods from "./views/Mods/Mods";
 import UserManagement from "./views/UserManagement/UserManagment";
 import ServerSettings from "./views/ServerSettings";
 import GameSettings from "./views/GameSettings";
-import ModOptions from "./views/ModOptions";
 import Console from "./views/Console";
 import Help from "./views/Help";
 import "./i18n";
@@ -51,18 +51,16 @@ const App = () => {
                 <Route element={<ProtectedRoute isAuthenticated={isAuthenticated}/> }>
                     <Route element={<Layout handleLogout={handleLogout} />}>
                         <Route index element={<Controls/>}/>
-                        <Route path="saves" element={<Navigate to="/servers/1/saves" replace/>}/>
-                        <Route path="mods" element={<Navigate to="/servers/1/mods" replace/>}/>
-                        <Route path="server-settings" element={<Navigate to="/servers/1/server-settings" replace/>}/>
-                        <Route path="game-settings" element={<Navigate to="/servers/1/game-settings" replace/>}/>
-                        <Route path="mod-options" element={<Navigate to="/servers/1/mod-options" replace/>}/>
-                        <Route path="console" element={<Navigate to="/servers/1/console" replace/>}/>
-                        <Route path="logs" element={<Navigate to="/servers/1/logs" replace/>}/>
+                        <Route path="saves" element={<RedirectToServerScoped suffix="saves"/>}/>
+                        <Route path="mods" element={<RedirectToServerScoped suffix="mods"/>}/>
+                        <Route path="server-settings" element={<RedirectToServerScoped suffix="server-settings"/>}/>
+                        <Route path="game-settings" element={<RedirectToServerScoped suffix="game-settings"/>}/>
+                        <Route path="console" element={<RedirectToServerScoped suffix="console"/>}/>
+                        <Route path="logs" element={<RedirectToServerScoped suffix="logs"/>}/>
                         <Route path="servers/:serverId/saves" element={<Saves/>}/>
                         <Route path="servers/:serverId/mods" element={<Mods/>}/>
                         <Route path="servers/:serverId/server-settings" element={<ServerSettings/>}/>
                         <Route path="servers/:serverId/game-settings" element={<GameSettings/>}/>
-                        <Route path="servers/:serverId/mod-options" element={<ModOptions/>}/>
                         <Route path="servers/:serverId/console" element={<Console/>}/>
                         <Route path="servers/:serverId/logs" element={<Logs/>}/>
                         <Route path="fsm-logs" element={<FsmLogs/>}/>

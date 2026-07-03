@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 	"github.com/gorilla/mux"
@@ -21,6 +22,25 @@ func ListServersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp = manager.ListServers()
+}
+
+func PreviewNextServerHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() { WriteResponse(w, resp) }()
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	manager := factorio.GetServerManager()
+	if manager == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		resp = "server manager is not initialized"
+		return
+	}
+	id, name, port := manager.PreviewNextServer()
+	resp = map[string]interface{}{
+		"id":   id,
+		"name": name,
+		"port": port,
+	}
 }
 
 func CreateServerHandler(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +105,7 @@ func UpdateServerHandler(w http.ResponseWriter, r *http.Request) {
 		Name      *string `json:"name"`
 		BindIP    *string `json:"bind_ip"`
 		Port      *int    `json:"port"`
+		Version   *string `json:"version"`
 		Autostart *bool   `json:"autostart"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -126,6 +147,24 @@ func UpdateServerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.Autostart != nil {
 		server.Autostart = *data.Autostart
+	}
+	if data.Version != nil {
+		trimmed := strings.TrimSpace(*data.Version)
+		if trimmed != "" && trimmed != server.VersionChannel {
+			if server.Running {
+				server.PendingRestart = true
+				server.VersionChannel = trimmed
+			} else if manager != nil {
+				server.VersionChannel = trimmed
+				if err := manager.EnsureServerVersion(server); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					resp = fmt.Sprintf("error installing Factorio %s: %s", trimmed, err)
+					return
+				}
+			} else {
+				server.VersionChannel = trimmed
+			}
+		}
 	}
 	if manager != nil {
 		if err := manager.UpdateServer(server); err != nil {

@@ -27,6 +27,7 @@ type Server struct {
 	ID             string                 `json:"id"`
 	Name           string                 `json:"name"`
 	VersionLabel   string                 `json:"version"`
+	VersionChannel string                 `json:"version_channel"`
 	Savefile       string                 `json:"savefile"`
 	Latency        int                    `json:"latency"`
 	BindIP         string                 `json:"bindip"`

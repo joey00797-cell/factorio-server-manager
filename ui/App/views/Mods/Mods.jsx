@@ -12,6 +12,7 @@ import Fuse from "fuse.js";
 import CreateModPack from "./components/CreateModPack";
 import ModPack from "./components/ModPack";
 import ModList from "./components/ModList";
+import ModOptionsTab from "./components/ModOptionsTab";
 import { useTranslation } from "react-i18next";
 import {useParams} from "react-router-dom";
 import ServerScopeHeader from "../../components/ServerScopeHeader";
@@ -27,6 +28,7 @@ const Mods = () => {
     const [isUpdatingAllMods, setIsUpdatingAllMods] = useState(false);
     const [updatableMods, setUpdatableMods] = useState([]);
     const [serverStatus, setServerStatus] = useState({running: false});
+    const [activeTab, setActiveTab] = useState(0);
 
     const addUpdatableMod = mod => {
         setUpdatableMods(mods => [...mods, mod])
@@ -123,7 +125,7 @@ const Mods = () => {
                        }
                 />
                 :
-                <TabControl>
+                <TabControl onChange={setActiveTab}>
                     <Tab title={t("mods.install_mod")}>
                         <AddMod refetchInstalledMods={fetchInstalledMods} fuse={fuse} serverId={serverId}/>
                     </Tab>
@@ -133,8 +135,12 @@ const Mods = () => {
                     <Tab title={t("mods.load_mods")}>
                         <LoadMods refreshMods={fetchInstalledMods} serverId={serverId}/>
                     </Tab>
+                    <Tab title={t("mods.mod_options", "Mod Options")}>
+                        <ModOptionsTab serverId={serverId}/>
+                    </Tab>
                 </TabControl>
             }
+            {!disabled && activeTab === 3 ? null : <>
             <Panel
                 title={t("mods.title")}
                 className="mb-6"
@@ -182,6 +188,7 @@ const Mods = () => {
                     <CreateModPack onSuccess={fetchModPacks}/>
                 }
             />
+            </>}
         </div>
     )
 }

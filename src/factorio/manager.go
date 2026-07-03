@@ -42,6 +42,7 @@ type ServerRecord struct {
 	ID             string        `json:"id"`
 	Name           string        `json:"name"`
 	Version        string        `json:"version"`
+	VersionChannel string        `json:"version_channel"`
 	BindIP         string        `json:"bind_ip"`
 	Port           int           `json:"port"`
 	RconPort       int           `json:"rcon_port"`
@@ -330,8 +331,9 @@ func (m *ServerManager) CreateServer(name, version, bindIP string, port int, aut
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	id := m.nextAvailableServerIDLocked()
 	if strings.TrimSpace(name) == "" {
-		name = fmt.Sprintf("Server %d", m.catalog.NextID)
+		name = fmt.Sprintf("Server %s", id)
 	}
 	if strings.TrimSpace(version) == "" || version == "uninstalled" {
 		version = "stable"
@@ -347,8 +349,6 @@ func (m *ServerManager) CreateServer(name, version, bindIP string, port int, aut
 		port = m.nextAvailableGamePortLocked()
 	}
 
-	id := strconv.Itoa(m.catalog.NextID)
-	m.catalog.NextID++
 	versionDir := filepath.Join(m.versionDir, resolvedVersion)
 	instanceRoot := filepath.Join(m.instanceDir, id)
 	paths := buildInstancePaths(instanceRoot, versionDir)
@@ -357,15 +357,16 @@ func (m *ServerManager) CreateServer(name, version, bindIP string, port int, aut
 	}
 
 	record := ServerRecord{
-		ID:        id,
-		Name:      name,
-		Version:   resolvedVersion,
-		BindIP:    bindIP,
-		Port:      port,
-		RconPort:  m.nextAvailableRconPortLocked(),
-		RconPass:  bootstrap.GenerateRandomPassword(),
-		Autostart: autostart,
-		Paths:     paths,
+		ID:             id,
+		Name:           name,
+		Version:        resolvedVersion,
+		VersionChannel: version,
+		BindIP:         bindIP,
+		Port:           port,
+		RconPort:       m.nextAvailableRconPortLocked(),
+		RconPass:       bootstrap.GenerateRandomPassword(),
+		Autostart:      autostart,
+		Paths:          paths,
 	}
 	m.catalog.Servers = append(m.catalog.Servers, record)
 	if err := m.saveCatalogLocked(); err != nil {
@@ -394,6 +395,7 @@ func (m *ServerManager) UpdateServer(server *Server) error {
 			m.catalog.Servers[i].LastSave = server.Savefile
 			m.catalog.Servers[i].PendingRestart = server.PendingRestart
 			m.catalog.Servers[i].Version = server.VersionLabel
+			m.catalog.Servers[i].VersionChannel = server.VersionChannel
 			m.catalog.Servers[i].Paths = server.Paths
 			return m.saveCatalogLocked()
 		}
@@ -412,6 +414,36 @@ func (m *ServerManager) DeleteServer(id string) error {
 		}
 	}
 	return fmt.Errorf("server %s not found", id)
+}
+
+// nextAvailableServerIDLocked returns the smallest positive integer ID not
+// currently used by any server, filling gaps left by deleted servers instead
+// of relying on an ever-increasing counter. Caller must hold m.mu.
+func (m *ServerManager) nextAvailableServerIDLocked() string {
+	used := make(map[int]bool)
+	for _, srv := range m.catalog.Servers {
+		if n, err := strconv.Atoi(srv.ID); err == nil {
+			used[n] = true
+		}
+	}
+	for i := 1; ; i++ {
+		if !used[i] {
+			return strconv.Itoa(i)
+		}
+	}
+}
+
+// PreviewNextServer returns the ID, default name and default port that would
+// be assigned to a new server if created right now with no explicit name or
+// port. It does not mutate state, so it's safe to call repeatedly for UI
+// previews.
+func (m *ServerManager) PreviewNextServer() (id string, name string, port int) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	id = m.nextAvailableServerIDLocked()
+	name = fmt.Sprintf("Server %s", id)
+	port = m.nextAvailableGamePortLocked()
+	return id, name, port
 }
 
 func (m *ServerManager) nextAvailableGamePortLocked() int {
@@ -452,6 +484,7 @@ func serverFromRecord(record ServerRecord) *Server {
 		ID:             record.ID,
 		Name:           record.Name,
 		VersionLabel:   record.Version,
+		VersionChannel: record.VersionChannel,
 		Savefile:       record.LastSave,
 		BindIP:         defaultString(record.BindIP, "0.0.0.0"),
 		Port:           record.Port,

@@ -6,6 +6,8 @@ import serverResource from "../../api/resources/server";
 import savesResource from "../../api/resources/saves";
 import {useTranslation} from "react-i18next";
 import {useServers} from "../context/ServersContext";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faTrash} from "@fortawesome/free-solid-svg-icons";
 
 const emptyCreate = {
     name: "",
@@ -22,12 +24,25 @@ const Controls = () => {
     const { t } = useTranslation();
     const {servers, refreshServers, refreshServerUntil} = useServers();
     const [availableVersions, setAvailableVersions] = useState({});
+    const [installedVersions, setInstalledVersions] = useState([]);
+    const [downloadedVersions, setDownloadedVersions] = useState([]);
+    const [busyVersion, setBusyVersion] = useState({});
     const [createForm, setCreateForm] = useState(emptyCreate);
+    const [nextPreview, setNextPreview] = useState({name: "", port: ""});
     const [savesByServer, setSavesByServer] = useState({});
     const [selectedSaveByServer, setSelectedSaveByServer] = useState({});
     const [busy, setBusy] = useState({});
 
     const serverIdsKey = useMemo(() => servers.map(server => server.id).join(","), [servers]);
+
+    const fetchNextPreview = async () => {
+        try {
+            const preview = await serverResource.previewNext();
+            setNextPreview({name: preview?.name || "", port: preview?.port || ""});
+        } catch {
+            setNextPreview({name: "", port: ""});
+        }
+    };
 
     const loadSaves = useCallback(async (srv) => {
         const serverId = typeof srv === "object" ? srv?.id : srv;
@@ -46,7 +61,10 @@ const Controls = () => {
 
     useEffect(() => {
         refreshServers().catch(err => console.error("Error loading servers", err));
+        fetchNextPreview();
         serverResource.availableVersions().then(setAvailableVersions).catch(() => {});
+        serverResource.installedVersions().then(d => setInstalledVersions(d?.versions || [])).catch(() => {});
+        serverResource.downloadedVersions().then(d => setDownloadedVersions(d?.versions || [])).catch(() => {});
     }, [refreshServers]);
 
     useEffect(() => {
@@ -116,6 +134,49 @@ const Controls = () => {
         await serverResource.create(payload);
         setCreateForm(emptyCreate);
         await refreshServers();
+        await fetchNextPreview();
+        serverResource.installedVersions().then(d => setInstalledVersions(d?.versions || [])).catch(() => {});
+        serverResource.downloadedVersions().then(d => setDownloadedVersions(d?.versions || [])).catch(() => {});
+    };
+
+    const handleDownload = async (version) => {
+        setBusyVersion(prev => ({...prev, [version]: "downloading"}));
+        try {
+            await serverResource.installVersion(version);
+        } finally {
+            serverResource.installedVersions().then(d => setInstalledVersions(d?.versions || [])).catch(() => {});
+            serverResource.downloadedVersions().then(d => setDownloadedVersions(d?.versions || [])).catch(() => {});
+            setBusyVersion(prev => ({...prev, [version]: null}));
+        }
+    };
+
+    const handleDeleteDownload = async (version) => {
+        setBusyVersion(prev => ({...prev, [version]: "deleting"}));
+        try {
+            await serverResource.deleteDownload(version);
+            setDownloadedVersions(prev => prev.filter(v => v !== version));
+        } finally {
+            setBusyVersion(prev => ({...prev, [version]: null}));
+        }
+    };
+
+    const handleCreateWithVersion = async (version) => {
+        const payload = {
+            ...createForm,
+            version,
+            port: createForm.port ? parseInt(createForm.port) : 0,
+        };
+        setBusyVersion(prev => ({...prev, [version]: "creating"}));
+        try {
+            await serverResource.create(payload);
+            setCreateForm(emptyCreate);
+            await refreshServers();
+            await fetchNextPreview();
+            serverResource.installedVersions().then(d => setInstalledVersions(d?.versions || [])).catch(() => {});
+            serverResource.downloadedVersions().then(d => setDownloadedVersions(d?.versions || [])).catch(() => {});
+        } finally {
+            setBusyVersion(prev => ({...prev, [version]: null}));
+        }
     };
 
     return (
@@ -124,37 +185,93 @@ const Controls = () => {
                 className="mb-6"
                 title={t("servers.create", "Create server")}
                 content={
-                    <form className="grid gap-3 lg:grid-cols-5" onSubmit={createServer}>
-                        <input
-                            className="shadow appearance-none border py-2 px-3 text-black"
-                            placeholder={t("name")}
-                            value={createForm.name}
-                            onChange={e => setCreateForm({...createForm, name: e.target.value})}
-                        />
-                        <select
-                            className="shadow appearance-none border py-2 px-3 text-black"
-                            value={createForm.version}
-                            onChange={e => setCreateForm({...createForm, version: e.target.value})}
-                        >
-                            <option value="stable">{versionLabel("stable")}</option>
-                            <option value="experimental">{versionLabel("experimental")}</option>
-                        </select>
-                        <input
-                            className="shadow appearance-none border py-2 px-3 text-black"
-                            value={createForm.bind_ip}
-                            onChange={e => setCreateForm({...createForm, bind_ip: e.target.value})}
-                        />
-                        <input
-                            className="shadow appearance-none border py-2 px-3 text-black"
-                            placeholder={t("controls.port")}
-                            type="number"
-                            min={1}
-                            max={65535}
-                            value={createForm.port}
-                            onChange={e => setCreateForm({...createForm, port: e.target.value})}
-                        />
-                        <Button isSubmit={true} type="success" className="w-full">{t("create")}</Button>
-                    </form>
+                    <div>
+                        {(() => {
+                            const allVersions = [
+                                {key: "stable", label: versionLabel("stable")},
+                                {key: "experimental", label: versionLabel("experimental")},
+                                ...installedVersions
+                                    .filter(v => v !== availableVersions?.stable?.headless && v !== availableVersions?.experimental?.headless)
+                                    .map(v => ({key: v, label: v}))
+                            ];
+                            const selKey = createForm.version || "stable";
+                            const resolvedKey = selKey === "stable"
+                                ? availableVersions?.stable?.headless || selKey
+                                : selKey === "experimental"
+                                    ? availableVersions?.experimental?.headless || selKey
+                                    : selKey;
+                            const isInstalled = selKey === "stable"
+                                ? installedVersions.includes(availableVersions?.stable?.headless)
+                                : selKey === "experimental"
+                                    ? installedVersions.includes(availableVersions?.experimental?.headless)
+                                    : installedVersions.includes(selKey);
+                            const isDownloaded = selKey === "stable"
+                                ? downloadedVersions.includes(availableVersions?.stable?.headless)
+                                : selKey === "experimental"
+                                    ? downloadedVersions.includes(availableVersions?.experimental?.headless)
+                                    : downloadedVersions.includes(selKey);
+                            const isBusy = !!busyVersion[selKey];
+                            let badgeClass = "text-xs px-2 py-1 ";
+                            let badgeText = "";
+                            if (isInstalled && isDownloaded) { badgeClass += "text-green"; badgeText = "✓ installed · zip cached"; }
+                            else if (isInstalled && !isDownloaded) { badgeClass += "text-green"; badgeText = "✓ installed"; }
+                            else if (!isInstalled && isDownloaded) { badgeClass += "text-orange"; badgeText = "zip cached · not installed"; }
+                            else { badgeClass += "text-gray-400"; badgeText = "not installed · no zip"; }
+                            return (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex gap-2" style={{width: "calc(50% - 10px)", flexShrink: 0}}>
+                                        <input
+                                            className="shadow appearance-none border py-2 px-3 text-black"
+                                            style={{flex: "2 1 0"}}
+                                            placeholder={nextPreview.name || t("name")}
+                                            value={createForm.name}
+                                            onChange={e => setCreateForm({...createForm, name: e.target.value})}
+                                        />
+                                        <input
+                                            className="shadow appearance-none border py-2 px-3 text-black"
+                                            style={{flex: "1.5 1 0"}}
+                                            value={createForm.bind_ip}
+                                            onChange={e => setCreateForm({...createForm, bind_ip: e.target.value})}
+                                        />
+                                        <input
+                                            className="shadow appearance-none border py-2 px-3 text-black"
+                                            style={{flex: "1 1 0"}}
+                                            placeholder={nextPreview.port ? String(nextPreview.port) : t("controls.port")}
+                                            type="number"
+                                            min={1}
+                                            max={65535}
+                                            value={createForm.port}
+                                            onChange={e => setCreateForm({...createForm, port: e.target.value})}
+                                        />
+                                    </div>
+                                    <select
+                                        className="shadow appearance-none border py-2 px-3 text-black"
+                                        style={{flex: "1 1 130px"}}
+                                        value={createForm.version}
+                                        onChange={e => setCreateForm({...createForm, version: e.target.value})}
+                                    >
+                                        {allVersions.map(({key, label}) => (
+                                            <option key={key} value={key}>{label}</option>
+                                        ))}
+                                    </select>
+                                    <span className={badgeClass}>{badgeText}</span>
+                                    {!isInstalled && (
+                                        <Button size="sm" type="default" isLoading={busyVersion[selKey] === "downloading"} isDisabled={isBusy} onClick={() => handleDownload(selKey)}>
+                                            {t("controls.download", "Download")}
+                                        </Button>
+                                    )}
+                                    <Button size="sm" type="success" isLoading={busyVersion[selKey] === "creating"} isDisabled={isBusy} onClick={() => handleCreateWithVersion(selKey)}>
+                                        {t("create")}
+                                    </Button>
+                                    {isDownloaded && (
+                                        <Button size="sm" type="danger" isLoading={busyVersion[selKey] === "deleting"} isDisabled={isBusy} onClick={() => handleDeleteDownload(resolvedKey)}>
+                                            <FontAwesomeIcon icon={faTrash}/>
+                                        </Button>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
                 }
             />
 
@@ -168,6 +285,10 @@ const Controls = () => {
                         setSelectedSave={save => setSelectedSaveByServer(prev => ({...prev, [srv.id]: save}))}
                         busy={busy}
                         runAction={runAction}
+                        versionLabel={versionLabel}
+                        availableVersions={availableVersions}
+                        installedVersions={installedVersions}
+                        onUpdated={refreshServers}
                         t={t}
                     />
                 ))}
@@ -176,12 +297,33 @@ const Controls = () => {
     );
 };
 
-const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runAction, t}) => {
+const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runAction, versionLabel, availableVersions, installedVersions, onUpdated, t}) => {
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-    const versionText = useMemo(() => {
-        if (server.fac_version && server.fac_version !== "0.0.0.0") return server.fac_version;
-        return server.version || t("controls.unknown");
-    }, [server, t]);
+    const [ipDraft, setIpDraft] = useState(server.bindip || server.bind_ip || "0.0.0.0");
+    const [portDraft, setPortDraft] = useState(server.port || "");
+    const [fieldBusy, setFieldBusy] = useState(false);
+
+    const resolveChannel = (srv) => {
+        if (srv.version_channel === "stable" || srv.version_channel === "experimental") return srv.version_channel;
+        const v = srv.version || "";
+        if (v === "stable" || v === "experimental") return v;
+        const stableV = availableVersions?.stable?.headless || "";
+        const expV = availableVersions?.experimental?.headless || "";
+        if (stableV && v.startsWith(stableV)) return "stable";
+        if (expV && v.startsWith(expV)) return "experimental";
+        return "stable";
+    };
+
+    const [versionDraft, setVersionDraft] = useState(() => resolveChannel(server));
+    const versionUserEdited = React.useRef(false);
+
+    useEffect(() => {
+        setIpDraft(server.bindip || server.bind_ip || "0.0.0.0");
+        setPortDraft(server.port || "");
+        if (!versionUserEdited.current) {
+            setVersionDraft(resolveChannel(server));
+        }
+    }, [server.bindip, server.bind_ip, server.port, server.version, server.fac_version]);
 
     const running = !!server.running;
     const noSave = saves.length === 0;
@@ -203,6 +345,49 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
             .finally(() => setIsConfirmingDelete(false));
     };
 
+    const saveField = async (field, value, revert) => {
+        setFieldBusy(true);
+        try {
+            await serverResource.update(server.id, {[field]: value});
+            await onUpdated();
+        } catch (err) {
+            const message = err?.response?.data || err?.message || "Update failed";
+            if (window.flash) window.flash(String(message), "red");
+            revert();
+        } finally {
+            setFieldBusy(false);
+        }
+    };
+
+    const handleIpBlur = () => {
+        const trimmed = ipDraft.trim();
+        const current = server.bindip || server.bind_ip || "0.0.0.0";
+        if (trimmed && trimmed !== current) {
+            saveField("bind_ip", trimmed, () => setIpDraft(current));
+        } else {
+            setIpDraft(current);
+        }
+    };
+
+    const handlePortBlur = () => {
+        const parsed = parseInt(portDraft);
+        if (parsed && parsed !== server.port) {
+            saveField("port", parsed, () => setPortDraft(server.port || ""));
+        } else {
+            setPortDraft(server.port || "");
+        }
+    };
+
+    const handleVersionChange = (e) => {
+        const value = e.target.value;
+        versionUserEdited.current = true;
+        setVersionDraft(value);
+        saveField("version", value, () => {
+            versionUserEdited.current = false;
+            setVersionDraft(server.version_channel || "stable");
+        });
+    };
+
     return (
         <div className="bg-gray-dark accentuated p-4">
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -213,90 +398,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                         {server.pending_restart ? <span className="ml-2 text-orange">({t("servers.pending_restart", "restart pending")})</span> : null}
                     </div>
                 </div>
-                <Link
-                    className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold"
-                    to={`/servers/${server.id}/saves`}
-                >
-                    {t("servers.manage", "Manage")}
-                </Link>
-            </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                <Info label="IP" value={server.bindip || server.bind_ip || "0.0.0.0"}/>
-                <Info label={t("controls.port")} value={server.port || "-"}/>
-                <Info label={t("controls.f_version")} value={versionText}/>
-                <Info label={t("controls.save")} value={server.savefile || "-"}/>
-            </div>
-
-            {!running && (
-                <div className="mb-3">
-                    <select
-                        className="shadow appearance-none border w-full py-2 px-3 text-black"
-                        value={selectedSave}
-                        disabled={noSave}
-                        onChange={e => setSelectedSave(e.target.value)}
-                    >
-                        {noSave
-                            ? <option value="">{t("saves.empty", "No saves for this server yet.")}</option>
-                            : saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
-                    </select>
-                </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-                {running ? (
-                    <>
-                        <Button
-                            size="sm"
-                            type="default"
-                            isLoading={busy[`${server.id}:save`]}
-                            onClick={() => runAction(server, "save", () => serverResource.save(server.id))}
-                        >
-                            {t("servers.save_now", "Save")}
-                        </Button>
-                        <Button
-                            size="sm"
-                            type="default"
-                            isLoading={busy[`${server.id}:stop`]}
-                            onClick={() => runAction(server, "stop", () => serverResource.stop(server.id))}
-                        >
-                            {t("controls.save&stop")}
-                        </Button>
-                        <Button
-                            size="sm"
-                            type="danger"
-                            isLoading={busy[`${server.id}:kill`]}
-                            onClick={() => runAction(server, "kill", () => serverResource.kill(server.id))}
-                        >
-                            {t("controls.kill_server")}
-                        </Button>
-                    </>
-                ) : (
-                    <span className={`inline-block ${startDisabledReason ? "cursor-not-allowed" : ""}`} title={startDisabledReason || undefined}>
-                        <Button
-                            className={startDisabledReason ? "pointer-events-none" : ""}
-                            size="sm"
-                            type="success"
-                            isDisabled={!!startDisabledReason}
-                            isLoading={busy[`${server.id}:start`]}
-                            onClick={() => runAction(server, "start", () => serverResource.start(server.bindip || server.bind_ip || "0.0.0.0", server.port || 34197, selectedSave, server.id))}
-                        >
-                            {t("controls.start_server")}
-                        </Button>
-                    </span>
-                )}
-                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/mods`}>
-                    {t("mods.title")}
-                </Link>
-                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/server-settings`}>
-                    {t("server_settings.title")}
-                </Link>
-                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/mod-options`}>
-                    {t("mods.mod_options", "Mod Options")}
-                </Link>
-                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold" to={`/servers/${server.id}/console`}>
-                    {t("console.title")}
-                </Link>
                 <span className={`inline-block ${deleteDisabledReason ? "cursor-not-allowed" : ""}`} title={deleteDisabledReason || undefined}>
                     <Button
                         className={deleteDisabledReason ? "pointer-events-none" : ""}
@@ -310,15 +412,109 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     </Button>
                 </span>
             </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div>
+                    <div className="font-bold mb-1">IP</div>
+                    <input
+                        className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
+                        value={ipDraft}
+                        disabled={fieldBusy}
+                        onChange={e => setIpDraft(e.target.value)}
+                        onBlur={handleIpBlur}
+                    />
+                </div>
+                <div>
+                    <div className="font-bold mb-1">{t("controls.port")}</div>
+                    <input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
+                        value={portDraft}
+                        disabled={fieldBusy}
+                        onChange={e => setPortDraft(e.target.value)}
+                        onBlur={handlePortBlur}
+                    />
+                </div>
+                <div>
+                    <div className="font-bold mb-1">{t("controls.f_version")}</div>
+                    <select
+                        className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
+                        value={versionDraft}
+                        disabled={fieldBusy}
+                        onChange={handleVersionChange}
+                    >
+                        <option value="stable">{versionLabel("stable")}</option>
+                        <option value="experimental">{versionLabel("experimental")}</option>
+                        {installedVersions.filter(v => v !== availableVersions?.stable?.headless && v !== availableVersions?.experimental?.headless).map(v => (
+                            <option key={v} value={v}>{v}</option>
+                        ))}
+                    </select>
+                    <div className="text-xs text-gray-400 mt-1">{server.fac_version && server.fac_version !== "0.0.0.0" ? server.fac_version : server.version}</div>
+                </div>
+                <div>
+                    <div className="font-bold mb-1">{t("controls.save")}</div>
+                    {running ? (
+                        <div className="text-sm py-1 break-words">{server.savefile || "-"}</div>
+                    ) : (
+                        <select
+                            className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
+                            value={selectedSave}
+                            disabled={noSave}
+                            onChange={e => setSelectedSave(e.target.value)}
+                        >
+                            {saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
+                        </select>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex gap-2 mb-3 items-stretch">
+                {running ? (
+                    <>
+                        <Button className="flex-1" size="sm" type="default" isLoading={busy[`${server.id}:save`]} onClick={() => runAction(server, "save", () => serverResource.save(server.id))}>
+                            {t("servers.save_now", "Save")}
+                        </Button>
+                        <Button className="flex-1" size="sm" type="default" isLoading={busy[`${server.id}:stop`]} onClick={() => runAction(server, "stop", () => serverResource.stop(server.id))}>
+                            {t("controls.save&stop")}
+                        </Button>
+                        <Button className="flex-1" size="sm" type="danger" isLoading={busy[`${server.id}:kill`]} onClick={() => runAction(server, "kill", () => serverResource.kill(server.id))}>
+                            {t("controls.kill_server")}
+                        </Button>
+                    </>
+                ) : (
+                    <span className={`inline-block w-full ${startDisabledReason ? "cursor-not-allowed" : ""}`} title={startDisabledReason || undefined}>
+                        <Button
+                            className={`w-full ${startDisabledReason ? "pointer-events-none" : ""}`}
+                            size="sm"
+                            type="success"
+                            isDisabled={!!startDisabledReason}
+                            isLoading={busy[`${server.id}:start`]}
+                            onClick={() => runAction(server, "start", () => serverResource.start(server.bindip || server.bind_ip || "0.0.0.0", server.port || 34197, selectedSave, server.id))}
+                        >
+                            {t("controls.start_server")}
+                        </Button>
+                    </span>
+                )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/saves`}>
+                    {t("saves.title")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/mods`}>
+                    {t("mods.title")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/server-settings`}>
+                    {t("server_settings.title")}
+                </Link>
+                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/console`}>
+                    {t("console.title")}
+                </Link>
+            </div>
         </div>
     );
 };
-
-const Info = ({label, value}) => (
-    <div>
-        <div className="font-bold">{label}</div>
-        <div className="break-words">{value}</div>
-    </div>
-);
 
 export default Controls;

@@ -84,7 +84,6 @@ const LayoutContent = ({handleLogout}) => {
                             <Link to={`${serverPrefix}/mods`}>{t("mods.title")}</Link>
                             <Link to={`${serverPrefix}/server-settings`}>{t("server_settings.title")}</Link>
                             <Link to={`${serverPrefix}/game-settings`}>{t("game_settings.title")}</Link>
-                            <Link to={`${serverPrefix}/mod-options`}>{t("mods.mod_options", "Mod Options")}</Link>
                             <Link to={`${serverPrefix}/console`}>{t("console.title")}</Link>
                             <Link to={`${serverPrefix}/logs`} last={true}>{t("logs.title")}</Link>
                         </div>

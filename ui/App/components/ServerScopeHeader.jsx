@@ -1,12 +1,29 @@
 import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
+import {useParams, useNavigate, useLocation} from "react-router-dom";
 import {useTranslation} from "react-i18next";
 import serverResource from "../../api/resources/server";
 
 const ServerScopeHeader = () => {
     const {serverId} = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
     const {t} = useTranslation();
     const [server, setServer] = useState(null);
+    const [allServers, setAllServers] = useState([]);
+
+    useEffect(() => {
+        let mounted = true;
+        serverResource.list()
+            .then(servers => {
+                if (mounted) setAllServers(servers || []);
+            })
+            .catch(() => {
+                if (mounted) setAllServers([]);
+            });
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (!serverId) return;
@@ -25,6 +42,12 @@ const ServerScopeHeader = () => {
 
     if (!serverId) return null;
 
+    const handleServerChange = (e) => {
+        const newId = e.target.value;
+        const newPath = location.pathname.replace(`/servers/${serverId}`, `/servers/${newId}`);
+        navigate(newPath);
+    };
+
     const name = server?.name || `${t("servers.server", "Server")} ${serverId}`;
     const running = !!server?.running;
     const version = server?.fac_version && server.fac_version !== "0.0.0.0"
@@ -39,7 +62,21 @@ const ServerScopeHeader = () => {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <div className="text-sm font-bold text-orange uppercase">{t("servers.editing", "Editing server")}</div>
-                    <h1 className="text-dirty-white text-2xl font-bold">{name}</h1>
+                    {allServers.length > 1 ? (
+                        <select
+                            className="bg-black text-dirty-white text-2xl font-bold border border-gray-light rounded px-1"
+                            value={serverId}
+                            onChange={handleServerChange}
+                        >
+                            {allServers.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name || `${t("servers.server", "Server")} ${s.id}`}
+                                </option>
+                            ))}
+                        </select>
+                    ) : (
+                        <h1 className="text-dirty-white text-2xl font-bold">{name}</h1>
+                    )}
                 </div>
                 <div className="flex flex-wrap gap-2 text-sm">
                     <Badge label={t("servers.id", "ID")} value={serverId}/>

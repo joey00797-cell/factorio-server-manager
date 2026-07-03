@@ -53,6 +53,56 @@ func sanitizeVersionName(version string) (string, error) {
 	return version, nil
 }
 
+func (m *ServerManager) ListInstalledVersions() []string {
+	entries, err := os.ReadDir(m.versionDir)
+	if err != nil {
+		return []string{}
+	}
+	var versions []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		binary := filepath.Join(m.versionDir, e.Name(), "bin", "x64", "factorio")
+		if _, err := os.Stat(binary); err == nil {
+			versions = append(versions, e.Name())
+		}
+	}
+	return versions
+}
+
+func (m *ServerManager) ListDownloadedVersions() []string {
+	entries, err := os.ReadDir(m.downloadDir)
+	if err != nil {
+		return []string{}
+	}
+	var versions []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		var ver string
+		if _, err := fmt.Sscanf(name, "factorio_%s", &ver); err == nil {
+			ver = strings.TrimSuffix(ver, ".tar.xz")
+			versions = append(versions, ver)
+		}
+	}
+	return versions
+}
+
+func (m *ServerManager) DeleteDownload(version string) error {
+	clean := filepath.Clean(version)
+	if clean != version || strings.Contains(clean, "/") || strings.Contains(clean, "..") {
+		return fmt.Errorf("invalid version name: %s", version)
+	}
+	archive := filepath.Join(m.downloadDir, fmt.Sprintf("factorio_%s.tar.xz", clean))
+	if _, err := os.Stat(archive); os.IsNotExist(err) {
+		return fmt.Errorf("archive not found: %s", archive)
+	}
+	return os.Remove(archive)
+}
+
 func (m *ServerManager) EnsureVersionInstalled(requested string) (string, error) {
 	resolved, err := resolveFactorioVersion(requested)
 	if err != nil {
@@ -120,13 +170,17 @@ func (m *ServerManager) EnsureServerVersion(server *Server) error {
 	if server == nil {
 		return fmt.Errorf("server is nil")
 	}
-	requested := server.VersionLabel
+	requested := server.VersionChannel
+	if strings.TrimSpace(requested) == "" {
+		requested = server.VersionLabel
+	}
 	if strings.TrimSpace(requested) == "" && server.Paths.VersionDir != "" {
 		requested = filepath.Base(server.Paths.VersionDir)
 	}
 	if strings.TrimSpace(requested) == "" || requested == "uninstalled" {
 		requested = "stable"
 	}
+	server.VersionChannel = requested
 
 	resolved, err := m.EnsureVersionInstalled(requested)
 	if err != nil {

@@ -7,6 +7,26 @@ export default {
         const response = await client.get('/api/servers');
         return response.data;
     },
+    previewNext: async () => {
+        const response = await client.get('/api/servers/next');
+        return response.data;
+    },
+    installedVersions: async () => {
+        const response = await client.get('/api/versions/installed');
+        return response.data;
+    },
+    installVersion: async (version) => {
+        const response = await client.post('/api/versions/install', {version});
+        return response.data;
+    },
+    downloadedVersions: async () => {
+        const response = await client.get('/api/versions/downloaded');
+        return response.data;
+    },
+    deleteDownload: async (version) => {
+        const response = await client.delete(`/api/versions/downloaded/${version}`);
+        return response.data;
+    },
     create: async (data) => {
         const response = await client.post('/api/servers', data);
         return response.data;

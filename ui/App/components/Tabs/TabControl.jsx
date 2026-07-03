@@ -1,8 +1,15 @@
 import React, {useState} from "react";
 import TabTitle from "./TabTitle";
 
-const TabControl = ({children}) => {
+const TabControl = ({children, onChange}) => {
     const [selectedTab, setSelectedTab] = useState(0)
+
+    const handleSelect = (index) => {
+        setSelectedTab(index)
+        if (onChange) {
+            onChange(index)
+        }
+    }
 
     return (
         <div className="mb-6">
@@ -13,7 +20,7 @@ const TabControl = ({children}) => {
                         title={item.props.title}
                         index={index}
                         isActive={index === selectedTab}
-                        setSelectedTab={setSelectedTab}
+                        setSelectedTab={handleSelect}
                     />
                 ))}
             </div>
