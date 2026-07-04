@@ -196,7 +196,12 @@ func ValidateSaveName(name string) (string, error) {
 	if !strings.EqualFold(filepath.Ext(name), ".zip") {
 		return "", fmt.Errorf("save name must end with .zip")
 	}
-	if strings.TrimSuffix(name, filepath.Ext(name)) == "" {
+	// normalize extension to lowercase so Factorio binary finds the file
+	ext := filepath.Ext(name)
+	if ext != ".zip" {
+		name = strings.TrimSuffix(name, ext) + ".zip"
+	}
+	if strings.TrimSuffix(name, ".zip") == "" {
 		return "", errors.New("save name cannot be blank")
 	}
 	return name, nil

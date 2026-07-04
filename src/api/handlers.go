@@ -526,7 +526,11 @@ func StartServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if server.GetRunning() == false {
-		resp = fmt.Sprintf("Error starting Factorio server: %s", err)
+		if err != nil {
+			resp = fmt.Sprintf("Error starting Factorio server: %v", err)
+		} else {
+			resp = "Error starting Factorio server: server did not start in time"
+		}
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

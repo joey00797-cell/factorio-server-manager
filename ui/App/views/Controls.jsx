@@ -192,9 +192,11 @@ const Controls = () => {
                                 {key: "experimental", label: versionLabel("experimental")},
                                 ...installedVersions
                                     .filter(v => v !== availableVersions?.stable?.headless && v !== availableVersions?.experimental?.headless)
-                                    .map(v => ({key: v, label: v}))
+                                    .map(v => ({key: v, label: v})),
+                                {key: "__other__", label: t("controls.other_version", "other...")}
                             ];
-                            const selKey = createForm.version || "stable";
+                            const isOther = createForm.version === "__other__";
+                            const selKey = isOther ? (createForm.customVersion || "") : (createForm.version || "stable");
                             const resolvedKey = selKey === "stable"
                                 ? availableVersions?.stable?.headless || selKey
                                 : selKey === "experimental"
@@ -210,7 +212,7 @@ const Controls = () => {
                                 : selKey === "experimental"
                                     ? downloadedVersions.includes(availableVersions?.experimental?.headless)
                                     : downloadedVersions.includes(selKey);
-                            const isBusy = !!busyVersion[selKey];
+                            const isBusy = !!busyVersion[selKey] || (isOther && !selKey);
                             let badgeClass = "text-xs px-2 py-1 ";
                             let badgeText = "";
                             if (isInstalled && isDownloaded) { badgeClass += "text-green"; badgeText = "✓ installed · zip cached"; }
@@ -218,24 +220,21 @@ const Controls = () => {
                             else if (!isInstalled && isDownloaded) { badgeClass += "text-orange"; badgeText = "zip cached · not installed"; }
                             else { badgeClass += "text-gray-400"; badgeText = "not installed · no zip"; }
                             return (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <div className="flex gap-2" style={{width: "calc(50% - 10px)", flexShrink: 0}}>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+                                    <div className="flex gap-2">
                                         <input
-                                            className="shadow appearance-none border py-2 px-3 text-black"
-                                            style={{flex: "2 1 0"}}
+                                            className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
                                             placeholder={nextPreview.name || t("name")}
                                             value={createForm.name}
                                             onChange={e => setCreateForm({...createForm, name: e.target.value})}
                                         />
                                         <input
-                                            className="shadow appearance-none border py-2 px-3 text-black"
-                                            style={{flex: "1.5 1 0"}}
+                                            className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
                                             value={createForm.bind_ip}
                                             onChange={e => setCreateForm({...createForm, bind_ip: e.target.value})}
                                         />
                                         <input
-                                            className="shadow appearance-none border py-2 px-3 text-black"
-                                            style={{flex: "1 1 0"}}
+                                            className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
                                             placeholder={nextPreview.port ? String(nextPreview.port) : t("controls.port")}
                                             type="number"
                                             min={1}
@@ -244,18 +243,45 @@ const Controls = () => {
                                             onChange={e => setCreateForm({...createForm, port: e.target.value})}
                                         />
                                     </div>
+                                    <div className="flex flex-wrap items-center gap-2">
                                     <select
-                                        className="shadow appearance-none border py-2 px-3 text-black"
-                                        style={{flex: "1 1 130px"}}
+                                        className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
                                         value={createForm.version}
-                                        onChange={e => setCreateForm({...createForm, version: e.target.value})}
+                                        onChange={e => setCreateForm({...createForm, version: e.target.value, customVersion: ""})}
                                     >
                                         {allVersions.map(({key, label}) => (
                                             <option key={key} value={key}>{label}</option>
                                         ))}
                                     </select>
+                                    {isOther && (
+                                        <input
+                                            className="shadow appearance-none border py-2 px-3 text-black"
+                                            style={{width: "100px", flexShrink: 0}}
+                                            placeholder="2.0.76"
+                                            value={createForm.customVersion || ""}
+                                            title={t("controls.other_version_hint", "Enter a specific Factorio version number, e.g. 2.0.76. Full list: factorio.com/download/archive")}
+                                            onChange={e => setCreateForm({...createForm, customVersion: e.target.value})}
+                                            onBlur={e => {
+                                                let v = e.target.value.trim();
+                                                if (!v) return;
+                                                v = v.replace(/[,\s]+/g, ".").replace(/\.{2,}/g, ".");
+                                                if (/^\d+$/.test(v)) {
+                                                    if (v.length <= 2) v = "2.0." + v;
+                                                    else if (v.length === 3) v = v[0] + "." + v[1] + "." + v[2];
+                                                    else v = v[0] + "." + v[1] + "." + v.slice(2);
+                                                }
+                                                const parts = v.split(".");
+                                                if (parts.length === 2) v = parts[0] + ".0." + parts[1];
+                                                const stableV = availableVersions?.stable?.headless;
+                                                const expV = availableVersions?.experimental?.headless;
+                                                if (stableV && v.startsWith(stableV)) { setCreateForm(f => ({...f, version: "stable", customVersion: ""})); return; }
+                                                if (expV && v.startsWith(expV)) { setCreateForm(f => ({...f, version: "experimental", customVersion: ""})); return; }
+                                                setCreateForm(f => ({...f, customVersion: v}));
+                                            }}
+                                        />
+                                    )}
                                     <span className={badgeClass}>{badgeText}</span>
-                                    {!isInstalled && (
+                                    {(!isInstalled || !isDownloaded) && (
                                         <Button size="sm" type="default" isLoading={busyVersion[selKey] === "downloading"} isDisabled={isBusy} onClick={() => handleDownload(selKey)}>
                                             {t("controls.download", "Download")}
                                         </Button>
@@ -268,6 +294,7 @@ const Controls = () => {
                                             <FontAwesomeIcon icon={faTrash}/>
                                         </Button>
                                     )}
+                                    </div>
                                 </div>
                             );
                         })()}

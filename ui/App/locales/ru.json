@@ -87,7 +87,6 @@
         "actions": "Действия",
         "create_new_save_only_when_server_not_running": "Создать новый сохранённый файл возможно только если сервер Factorio не запущен.",
         "factorio_not_installed": "Factorio не установлен. Установите сервер во вкладке \"Статус сервера\" перед созданием сейва.",
-        "factorio_not_installed": "Factorio не установлен. Установите сервер во вкладке \"Статус сервера\" перед созданием сейва.",
         "save_form": {
             "file_name": "Имя файла сохранения",
             "save_file_error": "Имя файла обязательное поле",
@@ -121,7 +120,8 @@
         "install_factorio": "Установить Factorio",
         "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio».",
         "downloading": "Загрузка... {{current}} МБ / {{total}} МБ",
-        "extracting": "Распаковка..."
+        "extracting": "Распаковка...",
+        "download": "Скачать"
     },
     "servers": {
         "create": "Создать сервер",
@@ -135,7 +135,10 @@
         "editing": "Редактируется сервер",
         "server": "Сервер",
         "id": "ID",
-        "running_summary": "Запущено серверов: {{running}} / {{total}}"
+        "running_summary": "Запущено серверов: {{running}} / {{total}}",
+        "no_servers_title": "Серверов пока нет",
+        "no_servers_hint": "Создайте первый сервер Factorio чтобы начать.",
+        "go_create": "Создать сервер"
     },
     "mods": {
         "change_mods_while_running_error_message": "Изменение модов отключено, пока сервер работает!",

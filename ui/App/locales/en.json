@@ -88,7 +88,6 @@
         "actions": "Actions",
         "create_new_save_only_when_server_not_running": "Create a new Save is only possible if the Factorio server is not running.",
         "factorio_not_installed": "Factorio is not installed. Please install the server in \"Server Status\" before creating a save.",
-        "factorio_not_installed": "Factorio is not installed. Please install the server in \"Server Status\" before creating a save.",
         "save_form": {
             "file_name": "Savefile Name",
             "save_file_error_message": "Savefile Name is required",
@@ -120,7 +119,8 @@
         "install_factorio": "Install Factorio",
         "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio».",
         "downloading": "Downloading... {{current}} MB / {{total}} MB",
-        "extracting": "Extracting..."
+        "extracting": "Extracting...",
+        "download": "Download"
     },
     "servers": {
         "create": "Create server",
@@ -134,7 +134,10 @@
         "editing": "Editing server",
         "server": "Server",
         "id": "ID",
-        "running_summary": "{{running}} / {{total}} servers running"
+        "running_summary": "{{running}} / {{total}} servers running",
+        "no_servers_title": "No servers yet",
+        "no_servers_hint": "Create your first Factorio server to get started.",
+        "go_create": "Create server"
     },
     "mods": {
         "change_mods_while_running_error_message": "Changing mods is disabled while the server is running!",

@@ -59,7 +59,7 @@ export default {
         });
         return response.data;
     },
-    installVersion: async (version) => {
+    installVersionLegacy: async (version) => {
         const response = await client.post('/api/server/install', {version});
         return response.data;
     },
