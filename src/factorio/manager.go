@@ -89,8 +89,23 @@ func InitServerManager() (*ServerManager, error) {
 	}
 
 	if _, err := os.Stat(manager.catalogFile); os.IsNotExist(err) {
-		if err := manager.migrateLegacy(config); err != nil {
-			return nil, err
+		// only migrate if there is actually a legacy install to migrate from
+		hasLegacyBinary := config.FactorioBinary != "" && func() bool {
+			_, e := os.Stat(config.FactorioBinary)
+			return e == nil
+		}()
+		hasLegacySaves := config.FactorioSavesDir != "" && func() bool {
+			_, e := os.Stat(config.FactorioSavesDir)
+			return e == nil
+		}()
+		if hasLegacyBinary || hasLegacySaves {
+			if err := manager.migrateLegacy(config); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := manager.saveCatalogLocked(); err != nil {
+				return nil, err
+			}
 		}
 	} else if err != nil {
 		return nil, err
@@ -369,6 +384,14 @@ func (m *ServerManager) CreateServer(name, version, bindIP string, port int, aut
 		Paths:          paths,
 	}
 	m.catalog.Servers = append(m.catalog.Servers, record)
+	if err := m.saveCatalogLocked(); err != nil {
+		return nil, err
+	}
+	// ensure the Factorio binary is available before returning the server
+	serverForInstall := serverFromRecord(record)
+	if err := m.EnsureServerVersion(serverForInstall); err != nil {
+		log.Printf("Warning: could not install Factorio %s for server %s: %v", resolvedVersion, id, err)
+	}
 	if err := m.saveCatalogLocked(); err != nil {
 		return nil, err
 	}

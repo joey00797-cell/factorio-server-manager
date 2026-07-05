@@ -27,6 +27,8 @@ const Controls = () => {
     const [installedVersions, setInstalledVersions] = useState([]);
     const [downloadedVersions, setDownloadedVersions] = useState([]);
     const [busyVersion, setBusyVersion] = useState({});
+    const [expandedDelete, setExpandedDelete] = useState(false);
+    const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [createForm, setCreateForm] = useState(emptyCreate);
     const [nextPreview, setNextPreview] = useState({name: "", port: ""});
     const [savesByServer, setSavesByServer] = useState({});
@@ -147,6 +149,33 @@ const Controls = () => {
             serverResource.installedVersions().then(d => setInstalledVersions(d?.versions || [])).catch(() => {});
             serverResource.downloadedVersions().then(d => setDownloadedVersions(d?.versions || [])).catch(() => {});
             setBusyVersion(prev => ({...prev, [version]: null}));
+        }
+    };
+
+    const handleDeleteInstalled = async (version) => {
+        setBusyVersion(prev => ({...prev, [version]: "deleting_installed"}));
+        try {
+            await serverResource.deleteInstalledVersion(version);
+            setInstalledVersions(prev => prev.filter(v => v !== version));
+        } finally {
+            setBusyVersion(prev => ({...prev, [version]: null}));
+            setExpandedDelete(false);
+        }
+    };
+
+    const handleDeleteAll = async (version, resolvedKey) => {
+        setBusyVersion(prev => ({...prev, [version]: "deleting_all"}));
+        try {
+            await Promise.all([
+                serverResource.deleteDownload(resolvedKey).catch(() => {}),
+                serverResource.deleteInstalledVersion(resolvedKey).catch(() => {}),
+            ]);
+            setDownloadedVersions(prev => prev.filter(v => v !== resolvedKey));
+            setInstalledVersions(prev => prev.filter(v => v !== resolvedKey));
+        } finally {
+            setBusyVersion(prev => ({...prev, [version]: null}));
+            setExpandedDelete(false);
+            setConfirmDeleteAll(false);
         }
     };
 
@@ -281,19 +310,57 @@ const Controls = () => {
                                         />
                                     )}
                                     <span className={badgeClass}>{badgeText}</span>
-                                    {(!isInstalled || !isDownloaded) && (
+                                    {(!isInstalled || !isDownloaded) && !expandedDelete && (
                                         <Button size="sm" type="default" isLoading={busyVersion[selKey] === "downloading"} isDisabled={isBusy} onClick={() => handleDownload(selKey)}>
                                             {t("controls.download", "Download")}
                                         </Button>
                                     )}
+                                    {!expandedDelete && (
                                     <Button size="sm" type="success" isLoading={busyVersion[selKey] === "creating"} isDisabled={isBusy} onClick={() => handleCreateWithVersion(selKey)}>
                                         {t("create")}
                                     </Button>
-                                    {isDownloaded && (
-                                        <Button size="sm" type="danger" isLoading={busyVersion[selKey] === "deleting"} isDisabled={isBusy} onClick={() => handleDeleteDownload(resolvedKey)}>
-                                            <FontAwesomeIcon icon={faTrash}/>
-                                        </Button>
                                     )}
+                                    {(isDownloaded || isInstalled) && (() => {
+                                        const expanded = expandedDelete === selKey;
+                                        const confirming = confirmDeleteAll === selKey;
+                                        if (!expanded) return (
+                                            <Button size="sm" type="danger" isDisabled={isBusy} onClick={() => { setExpandedDelete(selKey); setConfirmDeleteAll(false); }}>
+                                                <FontAwesomeIcon icon={faTrash}/>
+                                            </Button>
+                                        );
+                                        if (confirming) return (
+                                            <>
+                                                <Button size="sm" type="danger" isLoading={busyVersion[selKey] === "deleting_all"} onClick={() => handleDeleteAll(selKey, resolvedKey)}>
+                                                    {t("servers.confirm_delete", "Confirm")}
+                                                </Button>
+                                                <Button size="sm" type="default" isDisabled={isBusy} onClick={() => { setExpandedDelete(false); setConfirmDeleteAll(false); }}>
+                                                    ✕
+                                                </Button>
+                                            </>
+                                        );
+                                        return (
+                                            <>
+                                                {isDownloaded && (
+                                                    <Button size="sm" type="danger" isLoading={busyVersion[selKey] === "deleting"} isDisabled={isBusy} onClick={() => handleDeleteDownload(resolvedKey)}>
+                                                        zip
+                                                    </Button>
+                                                )}
+                                                {isInstalled && (
+                                                    <Button size="sm" type="danger" isLoading={busyVersion[selKey] === "deleting_installed"} isDisabled={isBusy} onClick={() => handleDeleteInstalled(resolvedKey)}>
+                                                        installed
+                                                    </Button>
+                                                )}
+                                                {isDownloaded && isInstalled && (
+                                                    <Button size="sm" type="danger" isDisabled={isBusy} onClick={() => setConfirmDeleteAll(selKey)}>
+                                                        all
+                                                    </Button>
+                                                )}
+                                                <Button size="sm" type="default" isDisabled={isBusy} onClick={() => setExpandedDelete(false)}>
+                                                    ✕
+                                                </Button>
+                                            </>
+                                        );
+                                    })()}
                                     </div>
                                 </div>
                             );
@@ -435,7 +502,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                         isLoading={busy[`${server.id}:delete`]}
                         onClick={deleteServer}
                     >
-                        {isConfirmingDelete ? t("servers.confirm_delete", "Confirm delete") : t("servers.delete", "Delete Server")}
+                        {isConfirmingDelete ? t("servers.confirm_delete", "Confirm delete") : <FontAwesomeIcon icon={faTrash}/>}
                     </Button>
                 </span>
             </div>
@@ -478,22 +545,20 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                             <option key={v} value={v}>{v}</option>
                         ))}
                     </select>
-                    <div className="text-xs text-gray-400 mt-1">{server.fac_version && server.fac_version !== "0.0.0.0" ? server.fac_version : server.version}</div>
                 </div>
                 <div>
                     <div className="font-bold mb-1">{t("controls.save")}</div>
-                    {running ? (
-                        <div className="text-sm py-1 break-words">{server.savefile || "-"}</div>
-                    ) : (
-                        <select
-                            className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
-                            value={selectedSave}
-                            disabled={noSave}
-                            onChange={e => setSelectedSave(e.target.value)}
-                        >
-                            {saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)}
-                        </select>
-                    )}
+                    <select
+                        className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
+                        value={running ? (server.savefile || "") : selectedSave}
+                        disabled={noSave || running}
+                        onChange={e => setSelectedSave(e.target.value)}
+                    >
+                        {noSave
+                            ? <option value="">{t("saves.upload_or_create", "Upload or create a save first")}</option>
+                            : saves.map(save => <option key={save.name} value={save.name}>{save.name}</option>)
+                        }
+                    </select>
                 </div>
             </div>
 
@@ -536,9 +601,15 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                 <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/server-settings`}>
                     {t("server_settings.title")}
                 </Link>
-                <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/console`}>
-                    {t("console.title")}
-                </Link>
+                {running ? (
+                    <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/console`}>
+                        {t("console.title")}
+                    </Link>
+                ) : (
+                    <span className="bg-gray-light py-1 px-2 accentuated text-black font-bold text-center opacity-40 cursor-not-allowed">
+                        {t("console.title")}
+                    </span>
+                )}
             </div>
         </div>
     );

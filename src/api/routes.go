@@ -511,6 +511,12 @@ var apiRoutes = Routes{
 		DeleteDownloadHandler,
 		false,
 	}, {
+		"DeleteInstalledVersion",
+		"DELETE",
+		"/versions/installed/{version}",
+		DeleteInstalledVersionHandler,
+		false,
+	}, {
 		"InstallVersion",
 		"POST",
 		"/versions/install",

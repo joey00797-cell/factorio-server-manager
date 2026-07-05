@@ -1057,6 +1057,24 @@ func DownloadedVersionsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"versions": versions})
 }
 
+func DeleteInstalledVersionHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	manager := factorio.GetServerManager()
+	if manager == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"server manager not initialized"}`))
+		return
+	}
+	vars := mux.Vars(r)
+	version := vars["version"]
+	if err := manager.DeleteInstalledVersion(version); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf(`{"error":%q}`, err.Error())))
+		return
+	}
+	w.Write([]byte(`{"ok":true}`))
+}
+
 func DeleteDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	manager := factorio.GetServerManager()

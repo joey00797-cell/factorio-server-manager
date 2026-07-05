@@ -27,6 +27,10 @@ export default {
         const response = await client.delete(`/api/versions/downloaded/${version}`);
         return response.data;
     },
+    deleteInstalledVersion: async (version) => {
+        const response = await client.delete(`/api/versions/installed/${version}`);
+        return response.data;
+    },
     create: async (data) => {
         const response = await client.post('/api/servers', data);
         return response.data;

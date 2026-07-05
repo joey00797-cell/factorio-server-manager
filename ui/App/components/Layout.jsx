@@ -39,7 +39,12 @@ const LayoutContent = ({handleLogout}) => {
         )
     }
 
-    const Link = ({children, to, last}) => {
+    const Link = ({children, to, last, disabled}) => {
+        if (disabled) return (
+            <span className={`accentuated bg-gray-light text-black font-bold py-2 px-4 w-full block opacity-40 cursor-not-allowed${last ? '' : ' mb-1'}`}>
+                {children}
+            </span>
+        );
         return (
             <NavLink
                 onClick={() => setIsNavCollapsed(true)}

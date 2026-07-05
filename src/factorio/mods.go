@@ -52,10 +52,12 @@ func ModStartUp() {
 		modsDir = server.modsDir()
 		modPackDir = server.Paths.ModPackDir
 	}
+	if factorioDir == "" {
+		return
+	}
 	//get main-folder info
 	factorioDirInfo, err := os.Stat(factorioDir)
 	if err != nil {
-		log.Printf("error getting stats from FactorioDir %s with error %s", factorioDir, err)
 		return
 	}
 	factorioDirPerm := factorioDirInfo.Mode().Perm()

@@ -91,6 +91,26 @@ func (m *ServerManager) ListDownloadedVersions() []string {
 	return versions
 }
 
+func (m *ServerManager) DeleteInstalledVersion(version string) error {
+	clean := filepath.Clean(version)
+	if clean != version || strings.Contains(clean, "/") || strings.Contains(clean, "..") {
+		return fmt.Errorf("invalid version name: %s", version)
+	}
+	m.mu.RLock()
+	for _, srv := range m.catalog.Servers {
+		if filepath.Base(srv.Paths.VersionDir) == clean {
+			m.mu.RUnlock()
+			return fmt.Errorf("version %s is in use by server %s", version, srv.ID)
+		}
+	}
+	m.mu.RUnlock()
+	versionDir := filepath.Join(m.versionDir, clean)
+	if _, err := os.Stat(versionDir); os.IsNotExist(err) {
+		return fmt.Errorf("version %s is not installed", version)
+	}
+	return os.RemoveAll(versionDir)
+}
+
 func (m *ServerManager) DeleteDownload(version string) error {
 	clean := filepath.Clean(version)
 	if clean != version || strings.Contains(clean, "/") || strings.Contains(clean, "..") {

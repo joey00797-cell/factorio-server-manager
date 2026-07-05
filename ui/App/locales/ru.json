@@ -16,7 +16,7 @@
     "change": "Изменить",
     "load": "Загрузить",
     "server_status": "Состояние сервера",
-    "server_management": "Управление сервером",
+    "server_management": "Управление серверами",
     "FSM_administration": "Администрирование FSM",
     "main_title": "Factorio Server Manager",
     "server_settings": {
@@ -99,10 +99,11 @@
             "save_file_error": "Файл сохранения обязателен",
             "upload": "Загрузить",
             "save_file_error_message": "Файл сохранения обязателен"
-        }
+        },
+        "upload_or_create": "Сначала загрузи или создай сейв"
     },
     "controls": {
-        "title": "Статус сервера",
+        "title": "Менеджер серверов",
         "status": "Статус",
         "running": "Запущен",
         "stopped": "Остановлен",

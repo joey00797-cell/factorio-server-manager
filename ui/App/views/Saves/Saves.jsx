@@ -15,6 +15,8 @@ const Saves = () => {
     const {serverId} = useParams();
 
     const [saves, setSaves] = useState([]);
+    const [sortField, setSortField] = useState("last_mod");
+    const [sortAsc, setSortAsc] = useState(false);
     const [serverStatus, setServerStatus] = useState({running: false});
 
     const updateList = () => {
@@ -69,9 +71,11 @@ const Saves = () => {
                         <table className="w-full">
                             <thead>
                             <tr className="text-left py-1">
-                                <th>{t("name")}</th>
-                                <th>{t("saves.last_modified")}</th>
-                                <th>{t("saves.size")}</th>
+                                {[["name", t("name")], ["last_mod", t("saves.last_modified")], ["size", t("saves.size")]].map(([field, label]) => (
+                                    <th key={field} className="cursor-pointer select-none pr-4 hover:text-orange" onClick={() => { if (sortField === field) setSortAsc(a => !a); else { setSortField(field); setSortAsc(true); } }}>
+                                        {label}<span className="text-gray-400 text-xs ml-1">{sortField === field ? (sortAsc ? "▲" : "▼") : "↕"}</span>
+                                    </th>
+                                ))}
                                 <th>{t("actions")}</th>
                             </tr>
                             </thead>
@@ -83,7 +87,13 @@ const Saves = () => {
                                     </td>
                                 </tr>
                             )}
-                            {saves.map(save =>
+                            {saves.slice().sort((a, b) => {
+                                let av = sortField === "size" ? a.size : sortField === "last_mod" ? new Date(a.last_mod) : a.name.toLowerCase();
+                                let bv = sortField === "size" ? b.size : sortField === "last_mod" ? new Date(b.last_mod) : b.name.toLowerCase();
+                                if (av < bv) return sortAsc ? -1 : 1;
+                                if (av > bv) return sortAsc ? 1 : -1;
+                                return 0;
+                            }).map(save =>
                                 <tr className="py-2 md:py-1 hover:glow-orange hover:bg-orange hover:text-black cursor-pointer" key={save.name}>
                                     <td className="pr-4">{save.name}</td>
                                     <td className="pr-4">{(new Date(save.last_mod)).toLocaleString()}</td>

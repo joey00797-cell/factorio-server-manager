@@ -98,10 +98,11 @@
             "file_name": "Savefile",
             "save_file_error_message": "Savefile is required",
             "upload": "Upload"
-        }
+        },
+        "upload_or_create": "Upload or create a save first"
     },
     "controls": {
-        "title": "Server Status",
+        "title": "Server Manager",
         "status": "Status",
         "unknown": "Unknown",
         "running": "Running",
