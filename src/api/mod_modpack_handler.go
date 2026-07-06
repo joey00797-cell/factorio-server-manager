@@ -134,6 +134,52 @@ func ModPackDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	resp = modPackName
 }
 
+func PublicModPackDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	modPackName := vars["modpack"]
+	if modPackName == "" {
+		http.Error(w, "modpack name required", http.StatusBadRequest)
+		return
+	}
+	manager := factorio.GetServerManager()
+	var modPackBase string
+	if manager != nil {
+		if srv := manager.DefaultServer(); srv != nil && srv.Paths.ModPackDir != "" {
+			modPackBase = srv.Paths.ModPackDir
+		}
+	}
+	if modPackBase == "" {
+		modPackBase = bootstrap.GetConfig().FactorioModPackDir
+	}
+	modPackFolder := filepath.Join(modPackBase, modPackName)
+	if _, err := os.Stat(modPackFolder); os.IsNotExist(err) {
+		http.Error(w, "modpack not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.zip"`, modPackName))
+	zipWriter := zip.NewWriter(w)
+	defer zipWriter.Close()
+	err := filepath.Walk(modPackFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		writer, err := zipWriter.Create(info.Name())
+		if err != nil {
+			return err
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(writer, file)
+		return err
+	})
+	if err != nil {
+		log.Printf("error creating modpack zip: %s", err)
+	}
+}
+
 func ModPackDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var resp interface{}

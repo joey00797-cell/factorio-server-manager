@@ -83,6 +83,12 @@ func NewRouter() *mux.Router {
 		Name("LoginUser").
 		HandlerFunc(LoginUser)
 
+	// Public modpack download — no auth required, safe URL without /api/ prefix
+	mainRouter.Path("/share/{modpack}").
+		Methods("GET").
+		Name("PublicModPackDownload").
+		HandlerFunc(PublicModPackDownloadHandler)
+
 	// Route for initializing websocket connection
 	// Clients connecting to /ws establish websocket connection by upgrading
 	// HTTP session.

@@ -173,10 +173,12 @@ const Mods = () => {
                 title={t("mods.mod_packs")}
                 className="mb-6"
                 content={
-                    modPacks.map(
-                        (pack, i) =>
+                    modPacks.length === 0 ? (
+                        <div className="text-gray-400 text-sm italic">{t("mods.no_mod_packs", "No mod packs yet. Create one to save your current mod setup.")}</div>
+                    ) : modPacks.map(
+                        (pack) =>
                             <ModPack factorioVersion={factorioVersion}
-                                     key={i}
+                                     key={pack.name}
                                      modPack={pack}
                                      reloadMods={fetchInstalledMods}
                                      reloadModPacks={fetchModPacks}
@@ -184,9 +186,7 @@ const Mods = () => {
                             />
                     )
                 }
-                actions={
-                    <CreateModPack onSuccess={fetchModPacks}/>
-                }
+                actions={<CreateModPack onSuccess={fetchModPacks}/>}
             />
             </>}
         </div>

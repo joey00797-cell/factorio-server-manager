@@ -2,6 +2,7 @@ package factorio
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -21,7 +22,29 @@ type ModPackResult struct {
 	Mods ModsResultList `json:"mods"`
 }
 
+func modPackDir() string {
+	if manager := GetServerManager(); manager != nil {
+		if srv := manager.DefaultServer(); srv != nil && srv.Paths.ModPackDir != "" {
+			return srv.Paths.ModPackDir
+		}
+	}
+	return bootstrap.GetConfig().FactorioModPackDir
+}
+
+func modsDir() string {
+	if manager := GetServerManager(); manager != nil {
+		if srv := manager.DefaultServer(); srv != nil && srv.Paths.ModsDir != "" {
+			return srv.Paths.ModsDir
+		}
+	}
+	return bootstrap.GetConfig().FactorioModsDir
+}
+
 func NewModPackMap() (ModPackMap, error) {
+	dir := modPackDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return ModPackMap{}, fmt.Errorf("error creating mod pack dir: %s", err)
+	}
 	var err error
 	modPackMap := make(ModPackMap)
 
@@ -50,10 +73,10 @@ func newModPack(modPackFolder string) (*ModPack, error) {
 func (modPackMap *ModPackMap) reload() error {
 	var err error
 	newModPackMap := make(ModPackMap)
-	config := bootstrap.GetConfig()
+	dir := modPackDir()
 
-	err = filepath.Walk(config.FactorioModPackDir, func(path string, info os.FileInfo, err error) error {
-		if path == config.FactorioModPackDir || !info.IsDir() {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if path == dir || !info.IsDir() {
 			return nil
 		}
 
@@ -93,15 +116,15 @@ func (modPackMap *ModPackMap) ListInstalledModPacks() []ModPackResult {
 
 func (modPackMap *ModPackMap) CreateModPack(modPackName string) error {
 	var err error
-	config := bootstrap.GetConfig()
-	modPackFolder := filepath.Join(config.FactorioModPackDir, modPackName)
+	modPackFolder := filepath.Join(modPackDir(), modPackName)
+	modsDirectory := modsDir()
 
 	if modPackMap.CheckModPackExists(modPackName) == true {
 		log.Printf("ModPack %s already existis", modPackName)
 		return errors.New("ModPack " + modPackName + " already exists, please choose a different name")
 	}
 
-	sourceFileInfo, err := os.Stat(config.FactorioModsDir)
+	sourceFileInfo, err := os.Stat(modsDirectory)
 	if err != nil {
 		log.Printf("error when reading factorioModsDir. %s", err)
 		return err
@@ -114,7 +137,7 @@ func (modPackMap *ModPackMap) CreateModPack(modPackName string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(config.FactorioModsDir)
+	files, err := ioutil.ReadDir(modsDirectory)
 	if err != nil {
 		log.Printf("error on reading the factorio mods dir: %s", err)
 		return err
@@ -122,7 +145,7 @@ func (modPackMap *ModPackMap) CreateModPack(modPackName string) error {
 
 	for _, file := range files {
 		if file.IsDir() == false {
-			sourceFilepath := filepath.Join(config.FactorioModsDir, file.Name())
+			sourceFilepath := filepath.Join(modsDirectory, file.Name())
 			destinationFilepath := filepath.Join(modPackFolder, file.Name())
 
 			sourceFile, err := os.Open(sourceFilepath)
@@ -197,10 +220,9 @@ func (modPackMap *ModPackMap) CheckModPackExists(modPackName string) bool {
 
 func (modPackMap *ModPackMap) DeleteModPack(modPackName string) error {
 	var err error
-	config := bootstrap.GetConfig()
-	modPackDir := filepath.Join(config.FactorioModPackDir, modPackName)
+	packDir := filepath.Join(modPackDir(), modPackName)
 
-	err = os.RemoveAll(modPackDir)
+	err = os.RemoveAll(packDir)
 	if err != nil {
 		log.Printf("error on removing the ModPack: %s", err)
 		return err
@@ -219,7 +241,7 @@ func (modPack *ModPack) LoadModPack() error {
 	var err error
 	config := bootstrap.GetConfig()
 	//clean factorio mod directory
-	err = clearModsDir(config.FactorioModsDir)
+	err = clearModsDir(modsDir())
 	if err != nil {
 		log.Printf("error on clearing the factorio mods dir: %s", err)
 		return err
