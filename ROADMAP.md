@@ -89,6 +89,14 @@
 - Add: full UI translation coverage
 - Add: per-server scoped API routes
 - Fix: controls i18n — autostart, install_factorio, factorio_not_installed keys
+- Add: flash notifications on server start/stop/kill/save (window.flash)
+- Add: server "Starting..." intermediate status (running but RCON not yet connected)
+- Add: rcon_connected field — accurate server ready state
+- Add: unified Logs page with tabs — Console / Server Logs / FSM Logs
+- Add: auto-scroll toggle on all log views (Console, Server Logs, FSM Logs)
+- Add: favicon (Factorio icon)
+- Add: portal username display next to logout button in mod install tab
+- Fix: portal login status persisted across tab switches (LoadMods, AddMod)
 
 ## 🚧 In Progress
 
@@ -101,7 +109,6 @@
 - Remember selected save file between page reloads
 
 ### Locales
-- Translation coverage improvements (new multi-server pages)
 
 ## 📋 Planned
 
@@ -110,17 +117,13 @@
 - Copy/move saves between server instances
 - Docker port mapping validation — warn if server port not exposed
 - After Factorio install: sync new fields from example config (dialog)
-- Favicon
 
 ### Mods
 - Mod pack creation with selective mod picking (checkboxes)
 
 ### Authentication
-- Show logged-in username on mod portal tab
 - Proper FSM login (registration form on first launch)
 
 ### UI
-- Notifications on server start/stop (WebSocket flash)
 - Upload save progress bar
-- Dual logs — Factorio server logs + FSM manager logs in one view
 - Public URL setting for share links (for servers behind NAT)
