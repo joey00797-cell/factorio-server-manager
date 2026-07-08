@@ -10,16 +10,21 @@ const AddMod = ({refetchInstalledMods, fuse, serverId}) => {
     const { t } = useTranslation();
 
     const [isFactorioAuthenticated, setIsFactorioAuthenticated] = useState(false);
+    const [portalUsername, setPortalUsername] = useState("");
 
     useEffect(() => {
         (async () => {
-            setIsFactorioAuthenticated(await modResource.portal.status())
+            const status = await modResource.portal.status();
+            if (status && status.logged_in) {
+                setIsFactorioAuthenticated(true);
+                setPortalUsername(status.username || "");
+            }
         })();
     }, []);
 
     return isFactorioAuthenticated
-        ? <AddModForm fuse={fuse} setIsFactorioAuthenticated={setIsFactorioAuthenticated} refetchInstalledMods={refetchInstalledMods} serverId={serverId}/>
-        : <FactorioLogin setIsFactorioAuthenticated={setIsFactorioAuthenticated}/>
+        ? <AddModForm fuse={fuse} setIsFactorioAuthenticated={setIsFactorioAuthenticated} refetchInstalledMods={refetchInstalledMods} serverId={serverId} portalUsername={portalUsername}/>
+        : <FactorioLogin setIsFactorioAuthenticated={setIsFactorioAuthenticated} setPortalUsername={setPortalUsername}/>
 }
 
 export default AddMod;

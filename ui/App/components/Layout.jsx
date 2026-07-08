@@ -89,7 +89,6 @@ const LayoutContent = ({handleLogout}) => {
                             <Link to={`${serverPrefix}/mods`}>{t("mods.title")}</Link>
                             <Link to={`${serverPrefix}/server-settings`}>{t("server_settings.title")}</Link>
                             <Link to={`${serverPrefix}/game-settings`}>{t("game_settings.title")}</Link>
-                            <Link to={`${serverPrefix}/console`}>{t("console.title")}</Link>
                             <Link to={`${serverPrefix}/logs`} last={true}>{t("logs.title")}</Link>
                         </div>
                     </div>
@@ -98,7 +97,6 @@ const LayoutContent = ({handleLogout}) => {
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
                             <Link to="/user-management">{t("users.title")}</Link>
                             <Button className="w-full mb-1" onClick={() => setIsChangingLang(true)}>{t("lang")}</Button>
-                            <Link to="/fsm-logs">{t("fsm_logs.title", "FSM Logs")}</Link>
                             <Link to="/help" last={true}>{t("help.title")}</Link>
                             <ChangeLangDialog
                                 isOpen={isChangingLang}

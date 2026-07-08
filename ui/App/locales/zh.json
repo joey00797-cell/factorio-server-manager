@@ -116,7 +116,8 @@
         "start_server": "Start Server",
         "autostart": "自动启动",
         "install_factorio": "安装 Factorio",
-        "factorio_not_installed": "Factorio 未安装。请选择版本并点击「安装 Factorio」。"
+        "factorio_not_installed": "Factorio 未安装。请选择版本并点击「安装 Factorio」。",
+        "starting": "启动中..."
     },
     "servers": {
         "create": "创建服务器",
@@ -187,7 +188,8 @@
     },
     "console": {
         "title": "Console",
-        "error": "The console is not available, because Factorio is not running."
+        "error": "The console is not available, because Factorio is not running.",
+        "autoscroll": "自动滚动"
     },
     "logs": {
         "title": "Logs"

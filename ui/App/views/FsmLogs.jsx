@@ -8,10 +8,13 @@ const POLL_INTERVAL_MS = 2000;
 const FsmLogs = () => {
     const { t } = useTranslation();
     const [logs, setLogs] = useState([]);
+    const [autoScroll, setAutoScroll] = useState(true);
+    const autoScrollRef = useRef(true);
     const logContainerRef = useRef(null);
     const bottomRef = useRef(null);
 
     const scrollToBottom = useCallback(() => {
+        if (!autoScrollRef.current) return;
         if (logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
@@ -57,6 +60,11 @@ const FsmLogs = () => {
         <Panel
             title={t("fsm_logs.title", "FSM Logs")}
             content={
+                <>
+                <div className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="autoscroll-fsm" checked={autoScroll} onChange={e => { setAutoScroll(e.target.checked); autoScrollRef.current = e.target.checked; }}/>
+                    <label htmlFor="autoscroll-fsm" className="text-sm cursor-pointer">Auto-scroll</label>
+                </div>
                 <div
                     ref={logContainerRef}
                     className="max-h-[70vh] overflow-y-auto"
@@ -66,6 +74,7 @@ const FsmLogs = () => {
                     </pre>
                     <div ref={bottomRef}/>
                 </div>
+                </>
             }
         />
     );

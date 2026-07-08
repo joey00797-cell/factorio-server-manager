@@ -121,7 +121,8 @@
         "factorio_not_installed": "Factorio is not installed. Select a version and click «Install Factorio».",
         "downloading": "Downloading... {{current}} MB / {{total}} MB",
         "extracting": "Extracting...",
-        "download": "Download"
+        "download": "Download",
+        "starting": "Starting..."
     },
     "servers": {
         "create": "Create server",
@@ -204,7 +205,8 @@
     },
     "console": {
         "title": "Console",
-        "error": "The console is not available, because Factorio is not running."
+        "error": "The console is not available, because Factorio is not running.",
+        "autoscroll": "Auto-scroll"
     },
     "logs": {
         "title": "Logs"

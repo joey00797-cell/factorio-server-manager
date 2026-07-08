@@ -105,6 +105,13 @@ func NewRouter() *mux.Router {
 		)
 
 	// Serves the frontend application from the app directory
+	mainRouter.Path("/favicon.ico").
+		Methods("GET").
+		Name("Favicon").
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/favicon.ico")
+		})
+
 	// Uses basic file server to serve index.html and Javascript application
 	// Routes match the ones defined in React frontend application
 	mainRouter.Path("/login").

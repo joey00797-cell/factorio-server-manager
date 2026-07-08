@@ -19,6 +19,7 @@ const emptyCreate = {
 
 const SAVE_REFRESH_DELAYS_MS = [1200, 3500];
 const STOP_RECONCILE_TIMEOUT_MS = 20000;
+const START_RECONCILE_TIMEOUT_MS = 120000;
 
 const Controls = () => {
     const { t } = useTranslation();
@@ -96,6 +97,7 @@ const Controls = () => {
         if (action === "save") {
             await loadSaves(srv);
             scheduleSaveRefresh(srv);
+            window.flash(srv.name + ": " + (srv.savefile || "saved"), "green");
             return;
         }
 
@@ -110,11 +112,18 @@ const Controls = () => {
             return;
         }
 
-        await refreshServers();
-
         if (action === "start") {
+            await refreshServerUntil(
+                srv.id,
+                server => !!server && !!server.rcon_connected,
+                {timeoutMs: START_RECONCILE_TIMEOUT_MS}
+            );
+            await refreshServers();
             await loadSaves(srv);
+            return;
         }
+
+        await refreshServers();
     };
 
     const runAction = async (srv, action, fn) => {
@@ -122,6 +131,12 @@ const Controls = () => {
         try {
             await fn();
             await reconcileAfterAction(srv, action);
+            const messages = {
+                start: {message: srv.name + " started", color: "green"},
+                stop:  {message: srv.name + " stopped", color: "orange"},
+                kill:  {message: srv.name + " killed",  color: "red"},
+            };
+            if (messages[action]) window.flash(messages[action].message, messages[action].color);
         } finally {
             setBusyFor(srv.id, action, false);
         }
@@ -420,6 +435,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
     }, [server.bindip, server.bind_ip, server.port, server.version, server.fac_version]);
 
     const running = !!server.running;
+    const starting = running && !server.rcon_connected;
     const noSave = saves.length === 0;
     const deleteDisabledReason = running ? t("servers.cant_delete_running", "Stop this server before deleting it.") : "";
     const startDisabledReason = noSave ? t("servers.cant_start_no_save", "Create or upload a save before starting this server.") : "";
@@ -484,11 +500,11 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
 
     return (
         <div className="bg-gray-dark accentuated p-4">
-            <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
+            <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
                     <h2 className="text-dirty-white text-xl font-bold">{server.name || `Server ${server.id}`}</h2>
-                    <div className={running ? "text-green font-bold" : "text-red font-bold"}>
-                        {running ? t("controls.running") : t("controls.stopped")}
+                    <div className={starting ? "text-orange font-bold" : running ? "text-green font-bold" : "text-red font-bold"}>
+                        {starting ? t("controls.starting", "Starting...") : running ? t("controls.running") : t("controls.stopped")}
                         {server.pending_restart ? <span className="ml-2 text-orange">({t("servers.pending_restart", "restart pending")})</span> : null}
                     </div>
                 </div>
@@ -602,7 +618,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     {t("server_settings.title")}
                 </Link>
                 {running ? (
-                    <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/console`}>
+                    <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/logs`}>
                         {t("console.title")}
                     </Link>
                 ) : (

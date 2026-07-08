@@ -6,7 +6,7 @@ import Button from "../../../../../components/Button";
 import modsResource from "../../../../../../api/resources/mods";
 import { useTranslation } from "react-i18next";
 
-const FactorioLogin = ({setIsFactorioAuthenticated}) => {
+const FactorioLogin = ({setIsFactorioAuthenticated, setPortalUsername}) => {
     const { t } = useTranslation();
     const {register, handleSubmit} = useForm();
     const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +15,8 @@ const FactorioLogin = ({setIsFactorioAuthenticated}) => {
         setIsLoading(true);
         modsResource.portal.login(username, token)
             .then(res => {
-                setIsFactorioAuthenticated(true)
+                setIsFactorioAuthenticated(true);
+                if (setPortalUsername) setPortalUsername(username);
             })
             .catch(() => window.flash(t("login.factorio_login_error_message"), "red"))
             .finally(() => setIsLoading(false));

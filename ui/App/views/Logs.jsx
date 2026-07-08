@@ -12,10 +12,13 @@ const Logs = () => {
     const {serverId} = useParams();
 
     const [logs, setLogs] = useState([]);
+    const [autoScroll, setAutoScroll] = useState(true);
+    const autoScrollRef = useRef(true);
     const logContainerRef = useRef(null);
     const bottomRef = useRef(null);
 
     const scrollToBottom = useCallback(() => {
+        if (!autoScrollRef.current) return;
         if (logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
@@ -63,6 +66,11 @@ const Logs = () => {
             <Panel
                 title={t("logs.title")}
                 content={
+                    <>
+                    <div className="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="autoscroll-logs" checked={autoScroll} onChange={e => { setAutoScroll(e.target.checked); autoScrollRef.current = e.target.checked; }}/>
+                        <label htmlFor="autoscroll-logs" className="text-sm cursor-pointer">Auto-scroll</label>
+                    </div>
                     <div
                         ref={logContainerRef}
                         className="max-h-[70vh] overflow-y-auto"
@@ -72,6 +80,7 @@ const Logs = () => {
                         </pre>
                         <div ref={bottomRef}/>
                     </div>
+                    </>
                 }
             />
         </>

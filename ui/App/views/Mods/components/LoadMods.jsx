@@ -39,6 +39,11 @@ const LoadMods = ({refreshMods, serverId}) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isDisabled, setIsDisabled] = useState(true);
     const [isFactorioAuthenticated, setIsFactorioAuthenticated] = useState(false);
+    useEffect(() => {
+        (async () => {
+            setIsFactorioAuthenticated(await modsResource.portal.status());
+        })();
+    }, []);
     const [modRows, setModRows] = useState([]);
     const [checkedMods, setCheckedMods] = useState({});
     const [syncError, setSyncError] = useState(null);

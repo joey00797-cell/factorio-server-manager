@@ -15,7 +15,7 @@ const LinkModPortal = () => {
         Portal <FontAwesomeIcon icon={faExternalLinkAlt}/></a>
 }
 
-const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods, serverId}) => {
+const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods, serverId, portalUsername}) => {
     const { t } = useTranslation();
     const {register, watch, setValue, handleSubmit} = useForm();
     const [suggestedMods, setSuggestedMods] = useState([]);
@@ -115,9 +115,16 @@ const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods, ser
                     </ul>
                 }
             </div>
-            <Button isDisabled={selectedMod === null} isSubmit={true} onClick={() => setIsModalOpen(true)} className="mr-2">{t("install")}</Button>
-            <Button onClick={logout} type="danger" className="mr-2">{t("logout")}</Button>
-            <LinkModPortal/>
+            <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                    <Button isDisabled={selectedMod === null} isSubmit={true} onClick={() => setIsModalOpen(true)}>{t("install")}</Button>
+                    <LinkModPortal/>
+                </div>
+                <div className="flex items-center gap-2">
+                    {portalUsername && <span className="text-sm text-green font-bold">{portalUsername}</span>}
+                    <Button onClick={logout} type="danger">{t("logout")}</Button>
+                </div>
+            </div>
         </form>
     )
 }

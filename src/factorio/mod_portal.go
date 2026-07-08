@@ -231,24 +231,29 @@ func FactorioLoginWithToken(username string, token string) (error, int) {
 	return nil, http.StatusOK
 }
 
-func FactorioLoginStatus() (bool, error, int) {
+type LoginStatus struct {
+	LoggedIn bool   `json:"logged_in"`
+	Username string `json:"username,omitempty"`
+}
+
+func FactorioLoginStatus() (LoginStatus, error, int) {
 	var credentials Credentials
 	status, err := credentials.Load()
 	if err != nil {
-		return false, err, http.StatusInternalServerError
+		return LoginStatus{}, err, http.StatusInternalServerError
 	}
 	if !status {
-		return false, nil, http.StatusOK
+		return LoginStatus{LoggedIn: false}, nil, http.StatusOK
 	}
 
 	err = credentials.Validate()
 	if err == nil {
-		return true, nil, http.StatusOK
+		return LoginStatus{LoggedIn: true, Username: credentials.Username}, nil, http.StatusOK
 	}
 	if err == ErrInvalidFactorioCredentials {
 		_ = credentials.Del()
-		return false, nil, http.StatusOK
+		return LoginStatus{LoggedIn: false}, nil, http.StatusOK
 	}
 
-	return false, err, http.StatusBadGateway
+	return LoginStatus{}, err, http.StatusBadGateway
 }

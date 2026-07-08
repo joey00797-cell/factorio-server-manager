@@ -46,6 +46,7 @@ type Server struct {
 	Settings       map[string]interface{} `json:"-"`
 	Rcon           *rcon.RemoteConsole    `json:"-"`
 	LogChan        chan []string          `json:"-"`
+	RconConnected  bool                   `json:"rcon_connected"`
 }
 
 var instantiated Server
@@ -355,6 +356,7 @@ func (server *Server) Run() error {
 
 	err = server.Cmd.Wait()
 	log.Printf("Factorio process is closed")
+	server.RconConnected = false
 	server.SetRunning(false)
 	if err != nil {
 		log.Printf("Factorio process exited with error: %s", err)
@@ -400,6 +402,9 @@ func (server *Server) parseRunningCommand(std io.ReadCloser) (err error) {
 				if strings.Contains(text, rconLog) {
 					log.Printf("Rcon running on Factorio Server")
 					err = server.connectRC()
+					if err == nil {
+						server.RconConnected = true
+					}
 					if err != nil {
 						log.Printf("Error: %s", err)
 					}

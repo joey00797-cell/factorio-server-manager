@@ -122,7 +122,8 @@
         "factorio_not_installed": "Factorio не установлен. Выберите версию и нажмите «Установить Factorio».",
         "downloading": "Загрузка... {{current}} МБ / {{total}} МБ",
         "extracting": "Распаковка...",
-        "download": "Скачать"
+        "download": "Скачать",
+        "starting": "Запускается..."
     },
     "servers": {
         "create": "Создать сервер",
@@ -205,7 +206,8 @@
     },
     "console": {
         "title": "Консоль",
-        "error": "Консоль недоступна, так как Factorio не запущен."
+        "error": "Консоль недоступна, так как Factorio не запущен.",
+        "autoscroll": "Автопрокрутка"
     },
     "logs": {
         "title": "Логи"

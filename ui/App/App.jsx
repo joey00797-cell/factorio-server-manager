@@ -5,8 +5,7 @@ import Login from "./views/Login";
 import {Navigate, Route, Routes} from "react-router";
 import Controls from "./views/Controls";
 import {BrowserRouter, Outlet} from "react-router-dom";
-import Logs from "./views/Logs";
-import FsmLogs from "./views/FsmLogs";
+import ServerLogs from "./views/ServerLogs";
 import Saves from "./views/Saves/Saves";
 import Layout from "./components/Layout";
 import RedirectToServerScoped from "./components/RedirectToServerScoped";
@@ -14,7 +13,6 @@ import Mods from "./views/Mods/Mods";
 import UserManagement from "./views/UserManagement/UserManagment";
 import ServerSettings from "./views/ServerSettings";
 import GameSettings from "./views/GameSettings";
-import Console from "./views/Console";
 import Help from "./views/Help";
 import "./i18n";
 
@@ -55,15 +53,13 @@ const App = () => {
                         <Route path="mods" element={<RedirectToServerScoped suffix="mods"/>}/>
                         <Route path="server-settings" element={<RedirectToServerScoped suffix="server-settings"/>}/>
                         <Route path="game-settings" element={<RedirectToServerScoped suffix="game-settings"/>}/>
-                        <Route path="console" element={<RedirectToServerScoped suffix="console"/>}/>
+                        <Route path="console" element={<RedirectToServerScoped suffix="logs"/>}/>
                         <Route path="logs" element={<RedirectToServerScoped suffix="logs"/>}/>
                         <Route path="servers/:serverId/saves" element={<Saves/>}/>
                         <Route path="servers/:serverId/mods" element={<Mods/>}/>
                         <Route path="servers/:serverId/server-settings" element={<ServerSettings/>}/>
                         <Route path="servers/:serverId/game-settings" element={<GameSettings/>}/>
-                        <Route path="servers/:serverId/console" element={<Console/>}/>
-                        <Route path="servers/:serverId/logs" element={<Logs/>}/>
-                        <Route path="fsm-logs" element={<FsmLogs/>}/>
+                        <Route path="servers/:serverId/logs" element={<ServerLogs/>}/>
                         <Route path="user-management" element={<UserManagement/>}/>
                         <Route path="help" element={<Help/>}/>
                     </Route>
