@@ -36,6 +36,7 @@ func main() {
 	manager.StartAutostartServers()
 
 	// Initialize authentication system
+	api.SetupDB()
 	api.SetupAuth()
 
 	// Initialize HTTP router -- also initializes websocket

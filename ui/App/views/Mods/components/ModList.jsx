@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age']);
 
-const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false}) => {
+const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null}) => {
     const { t } = useTranslation();
     const [sortField, setSortField] = useState(null);
     const [sortAsc, setSortAsc] = useState(true);
@@ -50,6 +50,7 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                     <th>{t("mods.mod_list.compatibility")}</th>
                     <th>{t("mods.mod_list.mod_version")}</th>
                     <th>{t("mods.mod_list.factorio_version")}</th>
+                    {onManifestToggle !== null && <th>{t("mods.on_server", "On server")}</th>}
                     <th/>
                 </tr>
             </thead>
@@ -93,6 +94,8 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                              addUpdatableMod={addUpdatableMod}
                              factorioVersion={factorioVersion}
                              disabled={disabled}
+                             inManifest={manifestAssetIds !== null ? manifestAssetIds.has(mod.name) : null}
+                             onManifestToggle={onManifestToggle}
                         />
                 )}
             </tbody>

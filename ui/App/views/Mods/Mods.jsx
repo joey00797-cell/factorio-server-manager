@@ -5,14 +5,13 @@ import Button from "../../components/Button";
 import server from "../../../api/resources/server";
 import TabControl from "../../components/Tabs/TabControl";
 import Tab from "../../components/Tabs/Tab";
-import AddMod from "./components/AddMod/AddMod";
-import UploadMod from "./components/UploadMod";
-import LoadMods from "./components/LoadMods";
 import Fuse from "fuse.js";
 import CreateModPack from "./components/CreateModPack";
 import ModPack from "./components/ModPack";
 import ModList from "./components/ModList";
 import ModOptionsTab from "./components/ModOptionsTab";
+import ModLibrary from "./components/ModLibrary";
+import modLibrary from "../../../api/resources/modLibrary";
 import { useTranslation } from "react-i18next";
 import {useParams} from "react-router-dom";
 import ServerScopeHeader from "../../components/ServerScopeHeader";
@@ -29,9 +28,24 @@ const Mods = () => {
     const [updatableMods, setUpdatableMods] = useState([]);
     const [serverStatus, setServerStatus] = useState({running: false});
     const [activeTab, setActiveTab] = useState(0);
+    const [manifest, setManifest] = useState({items: []});
+    const [libraryMods, setLibraryMods] = useState([]);
+    const [preview, setPreview] = useState(null);
 
     const addUpdatableMod = mod => {
         setUpdatableMods(mods => [...mods, mod])
+    };
+
+    const fetchManifest = () => {
+        modLibrary.manifest.get(serverId).then(m => setManifest(m || {items: []})).catch(() => {});
+    };
+
+    const fetchLibraryMods = () => {
+        modLibrary.list().then(assets => setLibraryMods(assets || [])).catch(() => {});
+    };
+
+    const loadPreview = () => {
+        modLibrary.manifest.preview(serverId).then(setPreview).catch(() => {});
     };
 
     const fetchInstalledMods = () => {
@@ -73,6 +87,8 @@ const Mods = () => {
                 fetchModPacks();
             })
 
+        fetchManifest();
+        fetchLibraryMods();
         // fetch list of mods
         modsResource.portal.list()
             .then(res => {
@@ -111,7 +127,25 @@ const Mods = () => {
             .then(fetchInstalledMods)
     }
 
+    useEffect(() => { if (serverId) loadPreview(); }, [manifest, libraryMods]);
+
     let disabled = serverStatus.running
+
+    const manifestAssetIds = new Set((manifest.items || []).map(i => i.asset && i.asset.name).filter(Boolean));
+
+    const onManifestToggle = async (mod) => {
+        const inManifest = manifestAssetIds.has(mod.name);
+        const currentItems = (manifest.items || []).map(i => ({asset_id: i.asset_id, enabled: i.enabled}));
+        let newItems;
+        if (inManifest) {
+            const asset = (manifest.items || []).find(i => i.asset && i.asset.name === mod.name);
+            newItems = currentItems.filter(i => i.asset_id !== (asset && asset.asset_id));
+        } else {
+            newItems = [...currentItems, {asset_id: mod.id, enabled: true}];
+        }
+        const updated = await modLibrary.manifest.update(serverId, newItems);
+        setManifest(updated);
+    };
 
     return (
         <div>
@@ -126,14 +160,8 @@ const Mods = () => {
                 />
                 :
                 <TabControl onChange={setActiveTab}>
-                    <Tab title={t("mods.install_mod")}>
-                        <AddMod refetchInstalledMods={fetchInstalledMods} fuse={fuse} serverId={serverId}/>
-                    </Tab>
-                    <Tab title={t("mods.upload_mod")}>
-                        <UploadMod refetchInstalledMods={fetchInstalledMods} serverId={serverId}/>
-                    </Tab>
-                    <Tab title={t("mods.load_mods")}>
-                        <LoadMods refreshMods={fetchInstalledMods} serverId={serverId}/>
+                    <Tab title={t("mods.mod_library", "Mod Library")}>
+                        <ModLibrary serverId={serverId} onModUploaded={fetchLibraryMods} preview={preview} onApplied={(result) => { setPreview(result); fetchLibraryMods(); fetchManifest(); }}/>
                     </Tab>
                     <Tab title={t("mods.mod_options", "Mod Options")}>
                         <ModOptionsTab serverId={serverId}/>
@@ -149,9 +177,11 @@ const Mods = () => {
                              toggleMod={toggleMod}
                              updateMod={updateMod}
                              deleteMod={deleteMod}
-                             mods={installedMods}
+                             mods={libraryMods}
                              factorioVersion={factorioVersion}
                              disabled={disabled}
+                             manifestAssetIds={manifestAssetIds}
+                             onManifestToggle={onManifestToggle}
                     />
                 }
                 actions={

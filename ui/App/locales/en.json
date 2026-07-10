@@ -190,7 +190,9 @@
         "cancel_sync": "Cancel",
         "calculating": "Calculating...",
         "mod_options": "Mod Options",
-        "mod_options_raw_note": "Edit the raw base64 encoded mod-settings.dat for this server."
+        "mod_options_raw_note": "Edit the raw base64 encoded mod-settings.dat for this server.",
+        "mod_library": "Mod Library",
+        "mod_library_help": "Mod Library is shared storage for mod files. Upload a mod ZIP once — then assign it to any server via manifest.\n\n1. Upload a ZIP or import from Mod Portal\n2. Add mods to manifest using + button\n3. Preview changes before applying\n4. Apply — deploys mods to server folder\n\nServer must be stopped before applying."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",

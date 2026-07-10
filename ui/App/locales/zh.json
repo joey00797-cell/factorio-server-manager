@@ -175,7 +175,9 @@
         "status_not_found": "Not found on portal",
         "status_downloading": "Downloading...",
         "mod_options": "模组设置",
-        "mod_options_raw_note": "编辑此服务器的 mod-settings.dat raw base64 内容。"
+        "mod_options_raw_note": "编辑此服务器的 mod-settings.dat raw base64 内容。",
+        "mod_library": "模组库",
+        "mod_library_help": "模组库是共享的模组文件存储。上传一次模组ZIP文件，即可通过清单分配给任意服务器。\n\n1. 上传ZIP或从模组门户导入\n2. 使用+按钮将模组添加到清单\n3. 通过预览查看更改\n4. 应用——将模组部署到服务器文件夹\n\n应用前必须停止服务器。"
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",

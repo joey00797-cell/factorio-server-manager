@@ -14,7 +14,7 @@ import React, {useEffect, useState} from "react";
 import { useTranslation } from "react-i18next";
 import {coerce, gt, satisfies} from "semver";
 
-const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatableMod, disabled = false}) => {
+const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatableMod, disabled = false, inManifest = null, onManifestToggle = null}) => {
     const { t } = useTranslation();
 
     const [newVersion, setNewVersion] = useState(null)
@@ -118,6 +118,14 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
                                                 className="hover:text-orange cursor-pointer ml-1"
                                                 icon={icon}/>}</td>
             <td className="pr-4">{mod.factorio_version}</td>
+            {onManifestToggle !== null && (
+                <td className="pr-4">
+                    {inManifest
+                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} title="On this server" onClick={() => onManifestToggle(mod)}/>
+                        : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} title="Not on this server" onClick={() => onManifestToggle(mod)}/>
+                    }
+                </td>
+            )}
             {
                 !disabled &&
                 <td className="pr-4">
