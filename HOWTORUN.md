@@ -112,7 +112,7 @@ docker logs ofsm 2>&1 | grep -i "password\|username"
         └── ...
 ```
 
-### 5. Clean
+### 6. Clean
 
 ```bash
 cat >> ~/.bashrc << 'ALIAS'
@@ -144,4 +144,10 @@ fsm-clean() {
 }
 ALIAS
 source ~/.bashrc
+```
+
+### 5. Run clean
+ 
+```bash
+fsm-clean
 ```
