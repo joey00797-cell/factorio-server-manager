@@ -112,3 +112,36 @@ docker logs ofsm 2>&1 | grep -i "password\|username"
         └── ...
 ```
 
+### 5. Clean
+
+```bash
+cat >> ~/.bashrc << 'ALIAS'
+fsm-clean() {
+    echo "=== FSM cleanup ==="
+
+    for name in ofsm fsm-extract; do
+        docker stop $name 2>/dev/null && echo "stopped: $name" || true
+        docker rm $name 2>/dev/null && echo "removed container: $name" || true
+    done
+
+    for img in my-fsm fsm-build-stage; do
+        docker rmi $img 2>/dev/null && echo "removed image: $img" || true
+    done
+
+    rm -rf /tmp/fsm-output2
+    rm -f /tmp/Dockerfile-run
+    echo "removed: /tmp/fsm-output2, /tmp/Dockerfile-run"
+
+    read -p "Удалить /opt/fsm-data и /opt/factorio-server? [y/N] " confirm
+    if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+        rm -rf /opt/fsm-data /opt/factorio-server
+        echo "removed: /opt/fsm-data, /opt/factorio-server"
+    else
+        echo "skipped: data directories"
+    fi
+
+    echo "=== done ==="
+}
+ALIAS
+source ~/.bashrc
+```
