@@ -28,9 +28,11 @@ mkdir -p /opt/fsm-data /opt/factorio-server
 ```bash
 cat > /tmp/Dockerfile-run << 'DOCKERFILE'
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates xz-utils && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates xz-utils curl jq && rm -rf /var/lib/apt/lists/*
 COPY entrypoint.sh /opt/entrypoint.sh
 COPY factorio-server-manager /opt/fsm/factorio-server-manager
+COPY app /opt/fsm/app
+COPY conf.json /opt/fsm/conf.json
 RUN chmod +x /opt/entrypoint.sh /opt/fsm/factorio-server-manager
 EXPOSE 80
 ENTRYPOINT ["/opt/entrypoint.sh"]
@@ -49,8 +51,17 @@ fsm-build() {
     docker create --name fsm-extract fsm-build-stage && \
     docker cp fsm-extract:/go/src/factorio-server-manager/build/. /tmp/fsm-output2/ && \
     docker rm fsm-extract && \
-    python3 -c "import zipfile; zipfile.ZipFile('/tmp/fsm-output2/factorio-server-manager-linux.zip').extractall('/tmp/fsm-output2/fsm-linux')" && \
-    cp -r /tmp/fsm-output2/fsm-linux/factorio-server-manager /tmp/fsm-output2/ && \
+    python3 -c "
+import zipfile, os
+z = zipfile.ZipFile('/tmp/fsm-output2/factorio-server-manager-linux.zip')
+for member in z.infolist():
+    # strip leading 'factorio-server-manager/' from paths
+    parts = member.filename.split('/', 1)
+    if len(parts) < 2 or not parts[1]:
+        continue
+    member.filename = parts[1]
+    z.extract(member, '/tmp/fsm-output2/')
+" && \
     cp ~/factorio-server-manager/docker/entrypoint.sh /tmp/fsm-output2/ && \
     docker build -f /tmp/Dockerfile-run -t my-fsm:latest /tmp/fsm-output2/ && \
     docker run -d \
