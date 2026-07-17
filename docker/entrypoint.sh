@@ -43,8 +43,7 @@ fi
 # Читаем autostart из conf.json
 AUTOSTART="false"
 if [ -f /opt/fsm-data/conf.json ]; then
-    AUTOSTART=$(jq -r '.autostart_server // false' /opt/fsm-data/conf.json)
+    AUTOSTART=$(jq -r '.autostart_server // "false"' /opt/fsm-data/conf.json 2>/dev/null || echo "false")
 fi
-
-cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio-server --servers-root /opt/factorio-server --port 80 --autostart $AUTOSTART
-
+AUTOSTART=${AUTOSTART:-false}
+cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio-server --servers-root /opt/factorio-server --port 80 --autostart "$AUTOSTART"
