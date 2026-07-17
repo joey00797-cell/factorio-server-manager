@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"os"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
@@ -233,6 +234,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		username, ok := session.Values["username"]
 		if !ok {
+			if r.Method == "GET" && !strings.HasPrefix(r.RequestURI, "/api/") {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
 			http.Error(w, "Could not read username from sessioncookie", http.StatusUnauthorized)
 			return
 		}

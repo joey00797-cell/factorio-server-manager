@@ -156,7 +156,7 @@
         "mods_loaded_from_save": "Моды загружены из файла сохранения @@@.",
         "load_mods_from_save": "Загрузить моды из сохранения",
         "load_confirm_dialog": "Загрузка модов из сохранения @@@ удалит все текущие установленные моды.",
-        "add_modpack_with_current_mods": "Добавить модпак с текущими модами",
+        "add_modpack_with_current_mods": "Add ModPack",
         "add_mod": {
             "loading_mod_list": "Загрузка списка модов из",
             "version": "Версия",

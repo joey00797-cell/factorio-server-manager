@@ -51,6 +51,14 @@ const modLibrary = {
             const response = await client.post(`/api/servers/${serverId}/mods/manifest/apply`);
             return response.data;
         },
+        syncDeps: async (serverId) => {
+            const response = await client.post(`/api/servers/${serverId}/mods/manifest/sync-deps`);
+            return response.data;
+        },
+        reset: async (serverId) => {
+            const response = await client.post(`/api/servers/${serverId}/mods/manifest/reset`);
+            return response.data;
+        },
     },
 };
 

@@ -132,19 +132,20 @@ func ModDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modList, resp, err := CreateNewModsForRequest(w, r)
-	if err != nil {
-		return
-	}
-
-	err = modList.DeleteMod(data.Name)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		resp = fmt.Sprintf("Error in deleting mod {%s}: %s", data.Name, err)
+	db := GetDB()
+	var asset factorio.ModAsset
+	if err := db.Where("name = ?", data.Name).First(&asset).Error; err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		resp = fmt.Sprintf("Mod {%s} not found in library", data.Name)
 		log.Println(resp)
 		return
 	}
-
+	if err := factorio.DeleteModAsset(db, asset.ID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		resp = fmt.Sprintf("Error deleting mod {%s}: %s", data.Name, err)
+		log.Println(resp)
+		return
+	}
 	resp = data.Name
 }
 
@@ -409,6 +410,32 @@ func LoadModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 	resp = header
 }
 
+// SyncDependenciesHandler resolves and downloads missing required dependencies
+// for all enabled mods in the server manifest.
+func SyncDependenciesHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	server, ok := serverFromRequest(r)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		resp = "server not found"
+		return
+	}
+
+	results, err := factorio.SyncDependencies(GetDB(), server.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		resp = fmt.Sprintf("dependency sync failed: %s", err)
+		return
+	}
+
+	resp = results
+}
+
 // SyncModsFromSaveHandler запускает синк модов из сейва в горутине.
 // Прогресс идёт через WebSocket room "mods_sync".
 // Сервер не стартует пока идёт синк.
@@ -456,7 +483,7 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go factorio.SyncModsFromSaveForDir(savePath, serverModsDir(server), server.ID, syncRequest.ModNames)
+	go factorio.SyncModsFromSaveForDir(GetDB(), savePath, serverModsDir(server), server.ID, syncRequest.ModNames)
 	resp = map[string]string{"status": "started"}
 }
 

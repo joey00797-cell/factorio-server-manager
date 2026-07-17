@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age']);
 
-const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null}) => {
+const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null, onDLCToggle = null, presets = [], onAddToPreset = null}) => {
     const { t } = useTranslation();
     const [sortField, setSortField] = useState(null);
     const [sortAsc, setSortAsc] = useState(true);
@@ -28,9 +28,13 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
     });
     const regularMods = sortedMods;
     const dlcEnabled = dlcMods.some(m => m.enabled);
+    console.log('[ModList] dlcMods:', dlcMods.map(m => ({name: m.name, enabled: m.enabled})), 'dlcEnabled:', dlcEnabled);
     const DLC_LIST = ["elevated-rails", "quality", "space-age"];
     const toggleDLC = () => {
-        if (dlcMods.length > 0) {
+        if (onDLCToggle !== null) {
+            // Manifest-based toggle for DLC
+            onDLCToggle(DLC_LIST, !dlcEnabled);
+        } else if (dlcMods.length > 0) {
             dlcMods.forEach(m => {
                 if (dlcEnabled === m.enabled) {
                     toggleMod(m.name);
@@ -47,10 +51,9 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                 <tr className="text-left py-1">
                     <th className="cursor-pointer select-none hover:text-orange" onClick={() => handleSort("name")}>{t("name")}<span className="text-gray-400 text-xs ml-1">{sortIcon("name")}</span></th>
                     <th className="cursor-pointer select-none hover:text-orange" onClick={() => handleSort("enabled")}>{t("mods.mod_list.enabled")}<span className="text-gray-400 text-xs ml-1">{sortIcon("enabled")}</span></th>
-                    <th>{t("mods.mod_list.compatibility")}</th>
                     <th>{t("mods.mod_list.mod_version")}</th>
                     <th>{t("mods.mod_list.factorio_version")}</th>
-                    {onManifestToggle !== null && <th>{t("mods.on_server", "On server")}</th>}
+
                     <th/>
                 </tr>
             </thead>
@@ -69,11 +72,13 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                                 ? dlcEnabled
                                     ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
                                     : <FontAwesomeIcon className="text-red" icon={faTimes}/>
-                                : dlcEnabled
-                                    ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green"
-                                                       icon={faToggleOn} onClick={toggleDLC}/>
-                                    : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red"
-                                                       icon={faToggleOff} onClick={toggleDLC}/>
+                                : onManifestToggle !== null
+                                    ? (dlcEnabled
+                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={toggleDLC}/>
+                                        : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} onClick={toggleDLC}/>)
+                                    : (dlcEnabled
+                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={toggleDLC}/>
+                                        : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red" icon={faToggleOff} onClick={toggleDLC}/>)
                             }
                         </td>
                         <td className="pr-4">
@@ -81,7 +86,6 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                         </td>
                         <td className="pr-4">{dlcMods[0]?.version}</td>
                         <td className="pr-4">{dlcMods[0]?.factorio_version}</td>
-                        <td/>
                     </tr>
                 )}
                 {/* Остальные моды */}
@@ -96,6 +100,8 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                              disabled={disabled}
                              inManifest={manifestAssetIds !== null ? manifestAssetIds.has(mod.name) : null}
                              onManifestToggle={onManifestToggle}
+                             presets={presets}
+                             onAddToPreset={onAddToPreset}
                         />
                 )}
             </tbody>

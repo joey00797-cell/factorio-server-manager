@@ -7,24 +7,33 @@ import {
     faTimes,
     faToggleOff,
     faToggleOn,
-    faTrashAlt
+    faTrashAlt,
+    faBookmark
 } from "@fortawesome/free-solid-svg-icons";
 import modsResource from "../../../../api/resources/mods";
 import React, {useEffect, useState} from "react";
 import { useTranslation } from "react-i18next";
 import {coerce, gt, satisfies} from "semver";
 
-const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatableMod, disabled = false, inManifest = null, onManifestToggle = null}) => {
+const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatableMod, disabled = false, inManifest = null, onManifestToggle = null, presets = [], onAddToPreset = null}) => {
     const { t } = useTranslation();
 
     const [newVersion, setNewVersion] = useState(null)
+    const [showPresetDropdown, setShowPresetDropdown] = useState(false)
     const [icon, setIcon] = useState(faArrowCircleUp)
     const portalUrl = `https://mods.factorio.com/mod/${encodeURIComponent(mod.name)}`
 
     useEffect(() => {
         if (!disabled) {
             (async () => {
-                const data = await modsResource.portal.info(mod.name)
+                let data;
+                try {
+                    data = await modsResource.portal.info(mod.name);
+                } catch (e) {
+                    // Mod not found on portal (local/custom mod) - skip update check
+                    return;
+                }
+                if (!data || !data.releases) return;
 
                 //get newest COMPATIBLE release
                 let newestRelease;
@@ -67,10 +76,18 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
         }
     }, [mod]);
 
+    const isCompatible = () => {
+        if (!factorioVersion || !mod.factorio_version) return true;
+        const serverMajor = parseInt(factorioVersion.split(".")[0]);
+        const modMajor = parseInt(mod.factorio_version.split(".")[0]);
+        return serverMajor === modMajor;
+    };
+    const compatible = isCompatible();
+
     return (
-        <tr className="py-1 hover:glow-orange hover:bg-orange hover:text-black">
+        <tr className={`py-1 ${mod.to_delete ? "bg-red-900 opacity-60" : !compatible ? "bg-red-950 opacity-70 hover:glow-orange hover:bg-orange hover:text-black" : "hover:glow-orange hover:bg-orange hover:text-black"}`}>
             <td className="pr-4">
-                {mod.title}
+                <span className={mod.to_delete ? "line-through text-red-400" : ""}>{mod.title}</span>
                 {mod.name && (
                     <a
                         href={portalUrl}
@@ -83,28 +100,13 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
                 )}
             </td>
             <td className="pr-4">
-                {
-                    disabled
-                        ?
-
-                        mod.enabled
-                            ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
-                            : <FontAwesomeIcon className="text-red" icon={faTimes}/>
-                        :
-                        mod.enabled
-                            ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green"
-                                               icon={faToggleOn}
-                                               onClick={() => toggleMod(mod.name)}/>
-                            :
-                            <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red"
-                                             icon={faToggleOff}
-                                             onClick={() => toggleMod(mod.name)}/>
-                }
-            </td>
-            <td className="pr-4">
-                {mod.compatibility
-                    ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
-                    : <FontAwesomeIcon className="text-red" icon={faTimes}/>
+                {onManifestToggle !== null
+                    ? (inManifest
+                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={() => compatible && onManifestToggle(mod)} title={compatible ? "" : "Incompatible with server version"}/>
+                        : <FontAwesomeIcon className={`cursor-pointer ${compatible ? "hover:text-gray text-gray-500" : "text-red opacity-40 cursor-not-allowed"}`} icon={faToggleOff} onClick={() => compatible && onManifestToggle(mod)} title={compatible ? "" : "Incompatible with server version"}/>)
+                    : (mod.enabled
+                        ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
+                        : <FontAwesomeIcon className="text-red" icon={faTimes}/>)
                 }
             </td>
             <td className="pr-4">
@@ -118,14 +120,7 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
                                                 className="hover:text-orange cursor-pointer ml-1"
                                                 icon={icon}/>}</td>
             <td className="pr-4">{mod.factorio_version}</td>
-            {onManifestToggle !== null && (
-                <td className="pr-4">
-                    {inManifest
-                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} title="On this server" onClick={() => onManifestToggle(mod)}/>
-                        : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} title="Not on this server" onClick={() => onManifestToggle(mod)}/>
-                    }
-                </td>
-            )}
+
             {
                 !disabled &&
                 <td className="pr-4">

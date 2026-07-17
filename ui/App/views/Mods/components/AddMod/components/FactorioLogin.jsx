@@ -24,17 +24,20 @@ const FactorioLogin = ({setIsFactorioAuthenticated, setPortalUsername}) => {
 
     return (
         <form onSubmit={handleSubmit(login)}>
-            <div className="flex mb-4">
-                <div className="w-1/2 mr-2">
-                    <Label text={t("username")} htmlFor="username"/>
-                    <Input register={register('username',{required: true})}/>
-                </div>
-                <div className="w-1/2 ml-2">
-                    <Label text={t("mods.add_mod.version")} htmlFor="password"/>
-                    <Input type="password" register={register('token',{required: true})}/>
-                </div>
+            <div className="flex items-center gap-2">
+                <input
+                    className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
+                    placeholder={t("username")}
+                    {...register('username', {required: true})}
+                />
+                <input
+                    type="password"
+                    className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
+                    placeholder={t("login.password", "Password")}
+                    {...register('token', {required: true})}
+                />
+                <Button isSubmit={true} isLoading={isLoading}>{t("login.login")}</Button>
             </div>
-            <Button isSubmit={true} isLoading={isLoading}>{t("login.login")}</Button>
         </form>
     )
 }

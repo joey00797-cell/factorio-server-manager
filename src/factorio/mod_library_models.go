@@ -69,6 +69,7 @@ type ServerModManifestItem struct {
 	ModAssetID          uint     `json:"mod_asset_id" gorm:"uniqueIndex:idx_server_manifest_asset"`
 	ModAsset            ModAsset `json:"mod_asset"`
 	Enabled             bool     `json:"enabled"`
+	ToDelete            bool     `json:"to_delete" gorm:"default:false"`
 }
 
 // ModDeployState — состояние одного мода (deployed или desired)
@@ -115,10 +116,11 @@ type ModAssetResult struct {
 }
 
 type ManifestItemResult struct {
-	ID      uint           `json:"id"`
-	AssetID uint           `json:"asset_id"`
-	Enabled bool           `json:"enabled"`
-	Asset   ModAssetResult `json:"asset"`
+	ID       uint           `json:"id"`
+	AssetID  uint           `json:"asset_id"`
+	Enabled  bool           `json:"enabled"`
+	ToDelete bool           `json:"to_delete"`
+	Asset    ModAssetResult `json:"asset"`
 }
 
 type ManifestResult struct {
@@ -151,10 +153,11 @@ func NewModAssetResult(a ModAsset) ModAssetResult {
 
 func newManifestItemResult(item ServerModManifestItem) ManifestItemResult {
 	return ManifestItemResult{
-		ID:      item.ID,
-		AssetID: item.ModAssetID,
-		Enabled: item.Enabled,
-		Asset:   NewModAssetResult(item.ModAsset),
+		ID:       item.ID,
+		AssetID:  item.ModAssetID,
+		Enabled:  item.Enabled,
+		ToDelete: item.ToDelete,
+		Asset:    NewModAssetResult(item.ModAsset),
 	}
 }
 

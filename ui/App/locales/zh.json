@@ -147,7 +147,7 @@
         "mods_loaded_from_save": "Mods are loaded from save file @@@.",
         "load_mods_from_save": "Load Mods from Save",
         "load_confirm_dialog": "Loading the Mods from Save @@@ will remove all currently installed Mods.",
-        "add_modpack_with_current_mods": "Add ModPack with current installed Mods",
+        "add_modpack_with_current_mods": "Add ModPack",
         "add_mod": {
             "loading_mod_list": "Loading List of Mods from",
             "version": "Version",

@@ -26,6 +26,24 @@ func ListModAssetsHandler(w http.ResponseWriter, r *http.Request) {
 	resp = assets
 }
 
+// POST /api/servers/{serverID}/mods/manifest/reset
+func ResetManifestHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() { WriteResponse(w, resp) }()
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	vars := mux.Vars(r)
+	serverID := vars["serverID"]
+
+	result, err := factorio.ResetManifestToDeployed(GetDB(), serverID)
+	if err != nil {
+		resp = fmt.Sprintf("Error resetting manifest: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	resp = result
+}
+
 // POST /api/mods/library/upload
 func UploadModToLibraryHandler(w http.ResponseWriter, r *http.Request) {
 	var resp interface{}
@@ -46,14 +64,18 @@ func UploadModToLibraryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	asset, err := factorio.ImportUploadedModToLibrary(GetDB(), file, header)
+	assets, err := factorio.ImportUploadedModToLibrary(GetDB(), file, header)
 	if err != nil {
 		resp = fmt.Sprintf("Error importing mod: %s", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	resp = factorio.NewModAssetResult(asset)
+	results := make([]factorio.ModAssetResult, len(assets))
+	for i, a := range assets {
+		results[i] = factorio.NewModAssetResult(a)
+	}
+	resp = results
 }
 
 // POST /api/mods/library/portal-import
@@ -133,8 +155,9 @@ func UpdateManifestHandler(w http.ResponseWriter, r *http.Request) {
 
 	var data struct {
 		Items []struct {
-			AssetID uint `json:"asset_id"`
-			Enabled bool `json:"enabled"`
+			AssetID  uint `json:"asset_id"`
+			Enabled  bool `json:"enabled"`
+			ToDelete bool `json:"to_delete"`
 		} `json:"items"`
 	}
 	if _, err := ReadFromRequestBody(w, r, &data); err != nil {

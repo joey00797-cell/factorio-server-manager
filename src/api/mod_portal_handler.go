@@ -47,6 +47,12 @@ func ModPortalModInfoHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err, statusCode = factorio.ModPortalModDetails(modId)
 
 	if err != nil {
+		// Mod not found on portal - not an error for local/custom mods
+		if statusCode == http.StatusNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			resp = nil
+			return
+		}
 		resp = fmt.Sprintf("Error in getting mod details from mod portal: %s", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -55,6 +61,7 @@ func ModPortalModInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(statusCode)
 }
+
 
 func ModPortalInstallHandler(w http.ResponseWriter, r *http.Request) {
 	var err error

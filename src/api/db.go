@@ -42,5 +42,8 @@ func SetupDB() {
 		log.Printf("Warning: failed to ensure DLC assets: %s", err)
 	}
 
+	// Clean up orphaned manifest items (mod deleted from library but still in manifest)
+	db.Exec(`DELETE FROM server_mod_manifest_items WHERE mod_asset_id NOT IN (SELECT id FROM mod_assets WHERE deleted_at IS NULL)`)
+
 	log.Println("Database initialized")
 }

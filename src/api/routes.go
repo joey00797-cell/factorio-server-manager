@@ -122,39 +122,57 @@ func NewRouter() *mux.Router {
 	subRouter.Path("/saves").
 		Methods("GET").
 		Name("Saves").
-		Handler(http.StripPrefix("/saves", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/mods").
 		Methods("GET").
 		Name("Mods").
-		Handler(http.StripPrefix("/mods", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/server-settings").
 		Methods("GET").
 		Name("Server settings").
-		Handler(http.StripPrefix("/server-settings", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/game-settings").
 		Methods("GET").
 		Name("Game settings").
-		Handler(http.StripPrefix("/game-settings", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/console").
 		Methods("GET").
 		Name("Console").
-		Handler(http.StripPrefix("/console", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/logs").
 		Methods("GET").
 		Name("Logs").
-		Handler(http.StripPrefix("/logs", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/fsm-logs").
 		Methods("GET").
 		Name("FSM Logs").
-		Handler(http.StripPrefix("/fsm-logs", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/user-management").
 		Methods("GET").
 		Name("User management").
-		Handler(http.StripPrefix("/user-management", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.Path("/help").
 		Methods("GET").
 		Name("Help").
-		Handler(http.StripPrefix("/help", http.FileServer(http.Dir("./app/"))))
+		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./app/index.html")
+		})
 	subRouter.PathPrefix("/servers").
 		Methods("GET").
 		Name("Servers").
@@ -355,6 +373,12 @@ var apiRoutes = Routes{
 		ApplyManifestHandler,
 		false,
 	}, {
+		"ManifestReset",
+		"POST",
+		"/servers/{serverID}/mods/manifest/reset",
+		ResetManifestHandler,
+		false,
+	}, {
 		"ScopedListInstalledMods",
 		"GET",
 		"/servers/{serverID}/mods/list",
@@ -420,6 +444,54 @@ var apiRoutes = Routes{
 		"/servers/{serverID}/saves/mods/sync",
 		SyncModsFromSaveHandler,
 		true,
+	}, {
+		"ScopedSyncDependencies",
+		"POST",
+		"/servers/{serverID}/mods/manifest/sync-deps",
+		SyncDependenciesHandler,
+		false,
+	}, {
+		"ListPresets",
+		"GET",
+		"/servers/{serverID}/presets",
+		ListPresetsHandler,
+		false,
+	}, {
+		"GetPreset",
+		"GET",
+		"/servers/{serverID}/presets/{preset}",
+		GetPresetHandler,
+		false,
+	}, {
+		"SavePreset",
+		"POST",
+		"/servers/{serverID}/presets",
+		SavePresetHandler,
+		false,
+	}, {
+		"LoadPreset",
+		"POST",
+		"/servers/{serverID}/presets/{preset}/load",
+		LoadPresetHandler,
+		false,
+	}, {
+		"DeletePreset",
+		"DELETE",
+		"/servers/{serverID}/presets/{preset}",
+		DeletePresetHandler,
+		false,
+	}, {
+		"AddModToPreset",
+		"POST",
+		"/servers/{serverID}/presets/{preset}/mods",
+		AddModToPresetHandler,
+		false,
+	}, {
+		"RemoveModFromPreset",
+		"DELETE",
+		"/servers/{serverID}/presets/{preset}/mods",
+		RemoveModFromPresetHandler,
+		false,
 	}, {
 		"ScopedModSettings",
 		"GET",

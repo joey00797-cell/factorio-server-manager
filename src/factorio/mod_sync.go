@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"compress/zlib"
 	"encoding/json"
+	"gorm.io/gorm"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -283,10 +284,10 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	if modsDir == "" {
 		return
 	}
-	SyncModsFromSaveForDir(savePath, modsDir, DefaultServerID, modNames)
+	SyncModsFromSaveForDir(nil, savePath, modsDir, DefaultServerID, modNames)
 }
 
-func SyncModsFromSaveForDir(savePath string, modsDir string, serverID string, modNames []string) {
+func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, serverID string, modNames []string) {
 	if !beginModsSync(serverID) {
 		log.Println("SyncModsFromSave: already syncing, skipping")
 		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: "sync already in progress"})
@@ -376,7 +377,7 @@ func SyncModsFromSaveForDir(savePath string, modsDir string, serverID string, mo
 	}
 
 	// 5. Собираем релизы и считаем общий размер
-	sendSyncProgress(ModSyncProgress{Status: "calculating", Total: total})
+	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "calculating", Total: total})
 	releases := make([]portalModRelease, len(toDownload))
 	var totalBytes int64
 	for i, saveMod := range toDownload {
@@ -431,8 +432,17 @@ func SyncModsFromSaveForDir(savePath string, modsDir string, serverID string, mo
 		}
 
 		currentModIdx := i
-		if err = mods.DownloadModWithProgress(release.DownloadURL, release.FileName, saveMod.Name, func(cur int64, total int64) {
-			sendSyncProgress(ModSyncProgress{
+		if db != nil {
+			// Download to mod library
+			_, libErr := ImportPortalModToLibrary(db, release.DownloadURL, release.FileName, saveMod.Name)
+			if libErr != nil {
+				results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "not_found"})
+				log.Printf("SyncModsFromSave: download failed for %s: %v", saveMod.Name, libErr)
+				continue
+			}
+			err = nil
+		} else if err = mods.DownloadModWithProgress(release.DownloadURL, release.FileName, saveMod.Name, func(cur int64, total int64) {
+			sendSyncProgressForServer(serverID, ModSyncProgress{
 				Status:       "progress",
 				Current:      currentModIdx + 1,
 				Total:        len(toDownload),

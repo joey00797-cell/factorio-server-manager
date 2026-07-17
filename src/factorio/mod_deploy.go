@@ -63,27 +63,28 @@ func newManifestResult(manifest ServerModManifest) ManifestResult {
 
 // UpdateManifestItems обновляет список модов в манифесте
 func UpdateManifestItems(db *gorm.DB, serverID string, items []struct {
-	AssetID uint `json:"asset_id"`
-	Enabled bool `json:"enabled"`
+	AssetID   uint `json:"asset_id"`
+	Enabled   bool `json:"enabled"`
+	ToDelete  bool `json:"to_delete"`
 }) (ManifestResult, error) {
 	manifest, err := ensureManifest(db, serverID)
 	if err != nil {
 		return ManifestResult{}, err
 	}
 
-	// Удаляем старые items
-	if err := db.Unscoped().Where("server_mod_manifest_id = ?", manifest.ID).Delete(&ServerModManifestItem{}).Error; err != nil {
+	// Удаляем старые items физически включая soft-deleted
+	if err := db.Exec("DELETE FROM server_mod_manifest_items WHERE server_mod_manifest_id = ?", manifest.ID).Error; err != nil {
 		return ManifestResult{}, err
 	}
+	// Также чистим orphaned soft-deleted записи для этого манифеста
+	db.Exec("DELETE FROM server_mod_manifest_items WHERE server_mod_manifest_id = ? AND deleted_at IS NOT NULL", manifest.ID)
 
 	// Создаём новые
 	for _, item := range items {
-		newItem := ServerModManifestItem{
-			ServerModManifestID: manifest.ID,
-			ModAssetID:          item.AssetID,
-			Enabled:             item.Enabled,
-		}
-		if err := db.Create(&newItem).Error; err != nil {
+		if err := db.Exec(
+			"INSERT INTO server_mod_manifest_items (created_at, updated_at, deleted_at, server_mod_manifest_id, mod_asset_id, enabled, to_delete) VALUES (datetime('now'), datetime('now'), NULL, ?, ?, ?, ?)",
+			manifest.ID, item.AssetID, item.Enabled, item.ToDelete,
+		).Error; err != nil {
 			return ManifestResult{}, err
 		}
 	}
@@ -92,6 +93,45 @@ func UpdateManifestItems(db *gorm.DB, serverID string, items []struct {
 }
 
 // deployedState читает что реально лежит в папке mods сервера
+// ResetManifestToDeployed resets manifest to match what is actually on server disk
+func ResetManifestToDeployed(db *gorm.DB, serverID string) (ManifestResult, error) {
+	serverObj, ok := GetServerManager().GetServer(serverID)
+	if !ok {
+		return ManifestResult{}, fmt.Errorf("server not found: %s", serverID)
+	}
+
+	deployed, err := deployedState(serverObj)
+	if err != nil {
+		return ManifestResult{}, err
+	}
+
+	manifest, err := ensureManifest(db, serverID)
+	if err != nil {
+		return ManifestResult{}, err
+	}
+
+	// Clear current manifest items
+	db.Unscoped().Where("server_mod_manifest_id = ?", manifest.ID).Delete(&ServerModManifestItem{})
+
+	// Rebuild from deployed state
+	for _, d := range deployed {
+		if d.Name == "base" {
+			continue
+		}
+		var asset ModAsset
+		if err := db.Where("name = ? AND version = ?", d.Name, d.Version).First(&asset).Error; err != nil {
+			continue
+		}
+		db.Create(&ServerModManifestItem{
+			ServerModManifestID: manifest.ID,
+			ModAssetID:          asset.ID,
+			Enabled:             true,
+		})
+	}
+
+	return GetManifest(db, serverID)
+}
+
 func deployedState(server *Server) ([]ModDeployState, error) {
 	modsDir := server.Paths.ModsDir
 	entries, err := os.ReadDir(modsDir)
@@ -120,11 +160,20 @@ func deployedState(server *Server) ([]ModDeployState, error) {
 	}
 
 	var states []ModDeployState
+
+	// Add DLC mods from mod-list.json (they have no zip file)
+	dlcNames := map[string]bool{"space-age": true, "elevated-rails": true, "quality": true}
+	for name, enabled := range enabledMap {
+		if dlcNames[name] {
+			states = append(states, ModDeployState{Name: name, Version: "", Enabled: enabled, IsDLC: true})
+		}
+	}
+
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".zip" {
 			continue
 		}
-		// Парсим имя файла: modname_version.zip
+		// Parse filename: modname_version.zip
 		base := strings.TrimSuffix(entry.Name(), ".zip")
 		lidx := strings.LastIndex(base, "_")
 		if lidx < 0 {
@@ -158,6 +207,10 @@ func desiredDeployState(db *gorm.DB, manifest ServerModManifest, baseVersion str
 	var issues []ModPreviewIssue
 	var states []ModDeployState
 	for _, item := range items {
+		// ToDelete items are excluded from desired state -> appear in ToRemove
+		if item.ToDelete {
+			continue
+		}
 		assetIssues := validateAssetDependencies(item.ModAsset, enabledAssetsByName, baseVersion)
 		issues = append(issues, assetIssues...)
 		id := item.ModAssetID
@@ -309,6 +362,25 @@ func PreviewApply(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 		}
 	}
 
+	// Include to_delete manifest items that are not deployed on disk
+	// (e.g. added to library but never applied) so they still appear in ToRemove
+	// and get cleaned up from the library on Apply
+	var toDeleteItems []ServerModManifestItem
+	if err := db.Preload("ModAsset").Where("server_mod_manifest_id = ? AND to_delete = ?", manifest.ID, true).Find(&toDeleteItems).Error; err == nil {
+		for _, item := range toDeleteItems {
+			key := item.ModAsset.Name + "@" + item.ModAsset.Version
+			if _, inDeployed := deployedByKey[key]; !inDeployed {
+				id := item.ModAssetID
+				preview.ToRemove = append(preview.ToRemove, ModDeployState{
+					Name:    item.ModAsset.Name,
+					Version: item.ModAsset.Version,
+					Enabled: false,
+					AssetID: &id,
+				})
+			}
+		}
+	}
+
 	sortModStates(preview.ToAdd)
 	sortModStates(preview.ToRemove)
 	sortModStates(preview.ToEnable)
@@ -365,12 +437,21 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 	db.Preload("ModAsset").Where("server_mod_manifest_id = ?", manifest.ID).Find(&items)
 
 	for _, item := range items {
+		// Skip mods marked for deletion
+		if item.ToDelete {
+			continue
+		}
 		// DLC моды не копируем, только добавляем в mod-list.json
 		if item.ModAsset.SourceType == "dlc" {
 			modList.Mods = append(modList.Mods, ModSimple{
 				Name:    item.ModAsset.Name,
 				Enabled: item.Enabled,
 			})
+			continue
+		}
+		// Skip if ModAsset not loaded (deleted from library)
+		if item.ModAsset.ID == 0 {
+			log.Printf("Warning: mod asset id=%d not found in library, skipping", item.ModAssetID)
 			continue
 		}
 		src, err := os.Open(item.ModAsset.ArtifactPath)
@@ -402,6 +483,17 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 	now := time.Now()
 	manifest.LastAppliedAt = &now
 	db.Save(&manifest)
+
+	// Delete ToDelete items from library and remove from manifest
+	var toDeleteItems []ServerModManifestItem
+	db.Preload("ModAsset").Where("server_mod_manifest_id = ? AND to_delete = ?", manifest.ID, true).Find(&toDeleteItems)
+	for _, item := range toDeleteItems {
+		if err := DeleteModAsset(db, item.ModAssetID); err != nil {
+			log.Printf("Warning: failed to delete mod %s from library: %v", item.ModAsset.Name, err)
+		}
+		// Remove manifest item explicitly
+		db.Unscoped().Delete(&item)
+	}
 
 	log.Printf("Applied manifest for server %s: +%d -%d", serverID, len(preview.ToAdd), len(preview.ToRemove))
 	return PreviewApply(db, serverID)
