@@ -146,7 +146,7 @@ ALIAS
 source ~/.bashrc
 ```
 
-### 5. Run clean
+### 7. Run clean
  
 ```bash
 fsm-clean
