@@ -65,6 +65,13 @@
 - Add: modpack share link — public /share/{modpack} endpoint, no auth required
 - Add: copy share link button on each mod pack
 
+### Windows
+- Add: batch launcher (start.bat) with Factorio auto-detection
+- Add: platform-aware default paths (servers-root next to exe)
+- Add: friendly error message when Factorio not installed
+- Add: auto-detect Factorio binary via --dir flag
+- Fix: skip automatic download on Windows (headless linux64 only)
+
 ### Saves
 - Add: save list sorting by name, date, size (default: date DESC)
 - Fix: save .ZIP extension normalized to .zip (Factorio binary requirement)
@@ -110,12 +117,6 @@
 
 ### Locales
 
-## ✅ Done (Windows)
-- Add: batch launcher (start.bat) with auto-detection of Factorio installation
-- Add: platform-aware default paths — servers-root next to exe on Windows
-- Add: friendly error message when Factorio not installed (with download link)
-- Add: auto-detect Factorio binary via --dir flag on Windows
-- Fix: skip automatic Factorio download on Windows (headless linux64 only)
 
 ## 📋 Planned
 
