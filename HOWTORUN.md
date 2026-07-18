@@ -151,3 +151,14 @@ source ~/.bashrc
 ```bash
 fsm-clean
 ```
+---
+
+## 🎁 Bonus: One-liner setup
+
+If you read this far — here's your reward:
+
+```bash
+git clone -b develop https://github.com/joey00797-cell/factorio-server-manager.git ~/factorio-server-manager && cd ~/factorio-server-manager && bash setup.sh
+```
+
+This will clone the repo, ask a few questions, and set everything up automatically.
