@@ -200,7 +200,17 @@ func (config *Config) loadServerConfig() {
 	}
 
 	if config.ServersRoot == "" {
-		config.ServersRoot = "/opt/factorio-server"
+		if runtime.GOOS == "windows" {
+			exeDir, err := os.Executable()
+			if err == nil {
+				exeDir = filepath.Dir(exeDir)
+			} else {
+				exeDir = "."
+			}
+			config.ServersRoot = filepath.Join(exeDir, "factorio-server")
+		} else {
+			config.ServersRoot = "/opt/factorio-server"
+		}
 	}
 
 	if config.GamePortRange == "" {

@@ -280,7 +280,7 @@ const Mods = () => {
                 }
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className={`grid grid-cols-1 gap-4 mb-6${presetList.length > 0 && modPacks.length > 0 ? " md:grid-cols-2" : ""}`}>
                 {presetList.length > 0 && (
                     <div>
                         <Panel
