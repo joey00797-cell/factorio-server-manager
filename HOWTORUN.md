@@ -158,7 +158,7 @@ fsm-clean
 If you read this far — here's your reward:
 
 ```bash
-rm -rf ~/factorio-server-manager && git clone -b develop https://github.com/joey00797-cell/factorio-server-manager.git ~/factorio-server-manager && cd ~/factorio-server-manager && bash setup.sh
+cd ~ && rm -rf ~/factorio-server-manager && git clone -b develop https://github.com/joey00797-cell/factorio-server-manager.git ~/factorio-server-manager && cd ~/factorio-server-manager && bash setup.sh
 ```
 
 This will clone the repo, ask a few questions, and set everything up automatically.
