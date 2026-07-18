@@ -110,6 +110,13 @@
 
 ### Locales
 
+## ✅ Done (Windows)
+- Add: batch launcher (start.bat) with auto-detection of Factorio installation
+- Add: platform-aware default paths — servers-root next to exe on Windows
+- Add: friendly error message when Factorio not installed (with download link)
+- Add: auto-detect Factorio binary via --dir flag on Windows
+- Fix: skip automatic Factorio download on Windows (headless linux64 only)
+
 ## 📋 Planned
 
 ### Server
@@ -127,10 +134,3 @@
 ### UI
 - Upload save progress bar
 - Public URL setting for share links (for servers behind NAT)
-
-### Windows
-- Add: batch launcher (start.bat) with auto-detection of Factorio installation
-- Add: platform-aware default paths — servers-root next to exe on Windows
-- Add: friendly error message when Factorio not installed (with download link)
-- Add: auto-detect Factorio binary via --dir flag on Windows
-- Fix: skip automatic Factorio download on Windows (headless linux64 only)
