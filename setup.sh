@@ -21,12 +21,32 @@ read -p "Number of server slots [10]: " UDP_SLOTS
 UDP_SLOTS=${UDP_SLOTS:-10}
 UDP_END=$((UDP_START + UDP_SLOTS - 1))
 
+# Macvlan setup
+echo ""
+read -p "Enable LAN broadcast via macvlan? [y/N]: " USE_MACVLAN
+CONTAINER_IP=""
+if [ "$USE_MACVLAN" = "y" ] || [ "$USE_MACVLAN" = "Y" ]; then
+    IFACE=$(ip route | awk '/default/ {print $5; exit}')
+    HOST_IP=$(ip -4 addr show $IFACE | awk '/inet / {print $2}' | cut -d/ -f1)
+    SUBNET=$(ip -4 addr show $IFACE | awk '/inet / {print $2}' | python3 -c "import sys,ipaddress; n=ipaddress.IPv4Network(sys.stdin.read().strip(),strict=False); print(str(n))")
+    GATEWAY=$(ip route | awk '/default/ {print $3; exit}')
+    LAST_OCTET=$(echo $HOST_IP | cut -d. -f4)
+    BASE=$(echo $HOST_IP | cut -d. -f1-3)
+    SUGGESTED_IP="$BASE.$((LAST_OCTET + 1))"
+    echo "  Interface: $IFACE | Host IP: $HOST_IP"
+    read -p "Container IP [$SUGGESTED_IP]: " CONTAINER_IP
+    CONTAINER_IP=${CONTAINER_IP:-$SUGGESTED_IP}
+fi
+
 echo ""
 echo "=== Configuration ==="
 echo "  FSM data:     $FSM_DATA"
 echo "  Factorio dir: $FACTORIO_DIR"
 echo "  HTTP port:    $HTTP_PORT"
 echo "  UDP ports:    $UDP_START-$UDP_END"
+if [ -n "$CONTAINER_IP" ]; then
+    echo "  macvlan IP:   $CONTAINER_IP"
+fi
 echo ""
 read -p "Proceed? [Y/n]: " confirm
 [ "$confirm" = "n" ] || [ "$confirm" = "N" ] && echo "Cancelled." && exit 0
@@ -34,6 +54,18 @@ read -p "Proceed? [Y/n]: " confirm
 # Create directories
 mkdir -p "$FSM_DATA" "$FACTORIO_DIR"
 echo "✓ Directories created"
+
+# Save macvlan config if enabled
+if [ -n "$CONTAINER_IP" ]; then
+    cat > ${FSM_DATA}/macvlan.conf << MACVLAN
+IFACE=${IFACE}
+SUBNET=${SUBNET}
+GATEWAY=${GATEWAY}
+CONTAINER_IP=${CONTAINER_IP}
+MACVLAN
+    echo "✓ macvlan.conf saved"
+    echo "⚠ Forward ports 80 and 34197-34206/udp to ${CONTAINER_IP} on your router"
+fi
 
 # Create Dockerfile-run
 create_dockerfile() {
@@ -53,6 +85,29 @@ create_dockerfile
 echo "✓ Dockerfile-run created"
 
 # Build and run function (used both here and in alias)
+# Setup macvlan network if config exists
+setup_macvlan() {
+    if [ -f "${FSM_DATA}/macvlan.conf" ]; then
+        . ${FSM_DATA}/macvlan.conf
+        docker network rm fsm-lan 2>/dev/null || true
+        docker network create -d macvlan \
+            --subnet=${SUBNET} \
+            --gateway=${GATEWAY} \
+            -o parent=${IFACE} \
+            fsm-lan
+        echo "✓ macvlan network created (${CONTAINER_IP})"
+    fi
+}
+
+get_network_args() {
+    if [ -f "${FSM_DATA}/macvlan.conf" ]; then
+        . ${FSM_DATA}/macvlan.conf
+        echo "--network fsm-lan --ip ${CONTAINER_IP}"
+    else
+        echo "-p ${HTTP_PORT}:80 -p ${UDP_START}-${UDP_END}:${UDP_START}-${UDP_END}/udp"
+    fi
+}
+
 do_build() {
     cd ~/factorio-server-manager
     docker stop ofsm 2>/dev/null; docker rm ofsm 2>/dev/null || true
@@ -75,10 +130,10 @@ for member in z.infolist():
 " && \
     cp ~/factorio-server-manager/docker/entrypoint.sh /tmp/fsm-output2/ && \
     docker build -f /tmp/Dockerfile-run -t my-fsm:latest /tmp/fsm-output2/ && \
+    setup_macvlan && \
     docker run -d \
         --name ofsm \
-        -p ${HTTP_PORT}:80 \
-        -p ${UDP_START}-${UDP_END}:${UDP_START}-${UDP_END}/udp \
+        $(get_network_args) \
         -v ${FSM_DATA}:/opt/fsm-data \
         -v ${FACTORIO_DIR}:/opt/factorio-server \
         my-fsm:latest && \
@@ -127,10 +182,10 @@ for member in z.infolist():
 " && \
     cp ~/factorio-server-manager/docker/entrypoint.sh /tmp/fsm-output2/ && \
     docker build -f /tmp/Dockerfile-run -t my-fsm:latest /tmp/fsm-output2/ && \
+    if [ -f "\${FSM_DATA}/macvlan.conf" ]; then . \${FSM_DATA}/macvlan.conf; docker network rm fsm-lan 2>/dev/null; docker network create -d macvlan --subnet=\${SUBNET} --gateway=\${GATEWAY} -o parent=\${IFACE} fsm-lan; fi && \
     docker run -d \
         --name ofsm \
-        -p \${HTTP_PORT}:80 \
-        -p \${UDP_START}-\${UDP_END}:\${UDP_START}-\${UDP_END}/udp \
+        $([ -f "\${FSM_DATA}/macvlan.conf" ] && { . \${FSM_DATA}/macvlan.conf; echo "--network fsm-lan --ip \${CONTAINER_IP}"; } || echo "-p \${HTTP_PORT}:80 -p \${UDP_START}-\${UDP_END}:\${UDP_START}-\${UDP_END}/udp") \
         -v \${FSM_DATA}:/opt/fsm-data \
         -v \${FACTORIO_DIR}:/opt/factorio-server \
         my-fsm:latest && \
@@ -141,8 +196,7 @@ fsm-start() {
     docker stop ofsm 2>/dev/null; docker rm ofsm 2>/dev/null || true
     docker run -d \
         --name ofsm \
-        -p \${HTTP_PORT}:80 \
-        -p \${UDP_START}-\${UDP_END}:\${UDP_START}-\${UDP_END}/udp \
+        $([ -f "\${FSM_DATA}/macvlan.conf" ] && { . \${FSM_DATA}/macvlan.conf; echo "--network fsm-lan --ip \${CONTAINER_IP}"; } || echo "-p \${HTTP_PORT}:80 -p \${UDP_START}-\${UDP_END}:\${UDP_START}-\${UDP_END}/udp") \
         -v \${FSM_DATA}:/opt/fsm-data \
         -v \${FACTORIO_DIR}:/opt/factorio-server \
         my-fsm:latest && echo "FSM STARTED"
@@ -181,7 +235,23 @@ echo "=== Running first build ==="
 do_build || { echo "Build failed! Run fsm-build manually."; exit 1; }
 
 echo ""
-echo "=== Done! ==="
-echo "Admin credentials:"
+echo "=== FSM Ready! ==="
+
+# Get container IP
+if [ -f "${FSM_DATA}/macvlan.conf" ]; then
+    . ${FSM_DATA}/macvlan.conf
+    FSM_URL="http://${CONTAINER_IP}"
+else
+    FSM_URL="http://$(hostname -I | awk '{print $1}'):${HTTP_PORT}"
+fi
+
 sleep 5
-docker logs ofsm 2>&1 | grep -i "password\|username" | head -5
+LOGS=$(docker logs ofsm 2>&1)
+FSM_USER=$(echo "$LOGS" | grep "Username:" | tail -1 | awk '{print $NF}')
+FSM_PASS=$(echo "$LOGS" | grep "admin password:" | tail -1 | awk '{print $NF}')
+
+echo "  URL:      ${FSM_URL}"
+echo "  Username: ${FSM_USER}"
+echo "  Password: ${FSM_PASS}"
+echo ""
+echo "⚠ Change admin password after first login!"
