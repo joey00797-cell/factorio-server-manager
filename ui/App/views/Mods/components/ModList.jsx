@@ -1,7 +1,7 @@
 import Mod from "./Mod";
 import React, {useState} from "react";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faCheck, faTimes, faToggleOff, faToggleOn} from "@fortawesome/free-solid-svg-icons";
+import {faCheck, faTimes, faToggleOff, faToggleOn, faChevronDown, faChevronRight} from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
 
 const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age']);
@@ -10,6 +10,7 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
     const { t } = useTranslation();
     const [sortField, setSortField] = useState(null);
     const [sortAsc, setSortAsc] = useState(true);
+    const [dlcExpanded, setDlcExpanded] = useState(false);
 
     const handleSort = (field) => {
         if (sortField === field) setSortAsc(a => !a);
@@ -59,13 +60,12 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
             </thead>
             <tbody>
                 {/* DLC группа */}
-                {factorioVersion !== null && (
-                    <tr className="py-1 bg-blue-50 hover:glow-orange hover:bg-orange hover:text-black">
+                {factorioVersion !== null && (<>
+                    <tr className="py-1 bg-blue-50 hover:glow-orange hover:bg-orange hover:text-black cursor-pointer"
+                        onClick={() => setDlcExpanded(e => !e)}>
                         <td className="pr-4 italic text-blue-600">
+                            <FontAwesomeIcon icon={dlcExpanded ? faChevronDown : faChevronRight} className="mr-2 text-xs"/>
                             Space Age DLC
-                            <span className="ml-2 text-xs text-gray-500 not-italic">
-                                (elevated-rails, quality, space-age)
-                            </span>
                         </td>
                         <td className="pr-4">
                             {disabled
@@ -74,20 +74,40 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                                     : <FontAwesomeIcon className="text-red" icon={faTimes}/>
                                 : onManifestToggle !== null
                                     ? (dlcEnabled
-                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={toggleDLC}/>
-                                        : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} onClick={toggleDLC}/>)
+                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>
+                                        : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>)
                                     : (dlcEnabled
-                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={toggleDLC}/>
-                                        : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red" icon={faToggleOff} onClick={toggleDLC}/>)
+                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>
+                                        : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red" icon={faToggleOff} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>)
                             }
                         </td>
-                        <td className="pr-4">
-                            <FontAwesomeIcon className="text-green" icon={faCheck}/>
-                        </td>
+                        <td className="pr-4"><FontAwesomeIcon className="text-green" icon={faCheck}/></td>
                         <td className="pr-4">{dlcMods[0]?.version}</td>
                         <td className="pr-4">{dlcMods[0]?.factorio_version}</td>
                     </tr>
-                )}
+                    {dlcExpanded && dlcMods.map(mod => (
+                        <tr key={mod.name} className="py-1 bg-blue-50 border-t border-blue-100 hover:bg-blue-100">
+                            <td className="pr-4 pl-6 text-blue-500">{mod.name}</td>
+                            <td className="pr-4">
+                                {disabled
+                                    ? mod.enabled
+                                        ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
+                                        : <FontAwesomeIcon className="text-red" icon={faTimes}/>
+                                    : onDLCToggle !== null
+                                        ? (mod.enabled
+                                            ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={() => onDLCToggle([mod.name], !mod.enabled)}/>
+                                            : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} onClick={() => onDLCToggle([mod.name], !mod.enabled)}/>)
+                                        : (mod.enabled
+                                            ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={() => toggleMod(mod.name)}/>
+                                            : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red" icon={faToggleOff} onClick={() => toggleMod(mod.name)}/>)
+                                }
+                            </td>
+                            <td className="pr-4"><FontAwesomeIcon className="text-green" icon={faCheck}/></td>
+                            <td className="pr-4">{mod.version}</td>
+                            <td className="pr-4">{mod.factorio_version}</td>
+                        </tr>
+                    ))}
+                </>)}
                 {/* Остальные моды */}
                 {factorioVersion !== null && regularMods.map(
                     (mod, i) =>
