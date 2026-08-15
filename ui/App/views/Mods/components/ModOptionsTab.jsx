@@ -8,6 +8,18 @@ const ModOptionsTab = ({serverId}) => {
     const [data, setData] = useState({exists: false, base64: "", size: 0, note: ""});
     const [isSaving, setIsSaving] = useState(false);
 
+    const handleUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const b64 = reader.result.split(",")[1];
+            setData(current => ({...current, base64: b64, size: file.size}));
+            window.flash(t("mods.mod_options_file_loaded", "File loaded, click Save to apply"), "green");
+        };
+        reader.readAsDataURL(file);
+    };
+
     useEffect(() => {
         modsResource.modSettings.get(serverId).then(setData);
     }, [serverId]);
@@ -37,7 +49,15 @@ const ModOptionsTab = ({serverId}) => {
                 value={data.base64 || ""}
                 onChange={e => setData({...data, base64: e.target.value})}
             />
-            <Button type="success" isLoading={isSaving} onClick={save}>{t("save")}</Button>
+            <div className="flex gap-2 items-center">
+                <Button type="success" isLoading={isSaving} onClick={save}>{t("save")}</Button>
+                <label className="cursor-pointer">
+                    <Button type="default" onClick={() => document.getElementById('mod-settings-upload').click()}>
+                        {t("upload") || "Upload"}
+                    </Button>
+                    <input id="mod-settings-upload" type="file" accept=".dat" className="hidden" onChange={handleUpload}/>
+                </label>
+            </div>
         </div>
     );
 };
