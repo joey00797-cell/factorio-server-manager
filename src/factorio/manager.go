@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 )
@@ -120,7 +121,41 @@ func InitServerManager() (*ServerManager, error) {
 
 	serverManager = manager
 	SetFactorioServer(*manager.DefaultServer())
+	go manager.rconWatchdog()
 	return manager, nil
+}
+
+func (m *ServerManager) rconWatchdog() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		for _, server := range m.ListServers() {
+			if server.WatchdogInterval <= 0 {
+				continue
+			}
+			if !server.GetRunning() {
+				continue
+			}
+			if time.Since(server.LastWatchdogPing) < time.Duration(server.WatchdogInterval)*time.Second {
+				continue
+			}
+			server.LastWatchdogPing = time.Now()
+			if server.RconConnected {
+				if server.Rcon == nil {
+					server.RconConnected = false
+				} else if _, err := server.Rcon.Write("/players online count"); err != nil {
+					log.Printf("rconWatchdog: RCON lost for server %s: %s", server.ID, err)
+					server.RconConnected = false
+				}
+			}
+			if !server.RconConnected {
+				if err := server.connectRC(); err == nil {
+					server.RconConnected = true
+					log.Printf("rconWatchdog: RCON reconnected for server %s", server.ID)
+				}
+			}
+		}
+	}
 }
 
 func GetServerManager() *ServerManager {

@@ -34,7 +34,9 @@ type Server struct {
 	Port           int                    `json:"port"`
 	RconPort       int                    `json:"rcon_port"`
 	RconPass       string                 `json:"-"`
-	Autostart      bool                   `json:"autostart"`
+	Autostart        bool                   `json:"autostart"`
+	WatchdogInterval int                    `json:"watchdog_interval"`
+	LastWatchdogPing time.Time              `json:"-"`
 	PendingRestart bool                   `json:"pending_restart"`
 	Paths          InstancePaths          `json:"paths"`
 	Running        bool                   `json:"running"`

@@ -106,7 +106,8 @@ func UpdateServerHandler(w http.ResponseWriter, r *http.Request) {
 		BindIP    *string `json:"bind_ip"`
 		Port      *int    `json:"port"`
 		Version   *string `json:"version"`
-		Autostart *bool   `json:"autostart"`
+		Autostart         *bool   `json:"autostart"`
+		WatchdogInterval *int    `json:"watchdog_interval"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -147,6 +148,14 @@ func UpdateServerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.Autostart != nil {
 		server.Autostart = *data.Autostart
+	}
+	if data.WatchdogInterval != nil {
+		if *data.WatchdogInterval < 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			resp = "watchdog_interval must be >= 0"
+			return
+		}
+		server.WatchdogInterval = *data.WatchdogInterval
 	}
 	if data.Version != nil {
 		trimmed := strings.TrimSpace(*data.Version)

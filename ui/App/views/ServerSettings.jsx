@@ -18,7 +18,7 @@ const ServerSettings = () => {
 
     const [settings, setSettings] = useState();
     const [server, setServer] = useState(null);
-    const [networkForm, setNetworkForm] = useState({name: "", bind_ip: "0.0.0.0", port: 34197, autostart: false});
+    const [networkForm, setNetworkForm] = useState({name: "", bind_ip: "0.0.0.0", port: 34197, autostart: false, watchdog_interval: 0});
     const [isSavingNetwork, setIsSavingNetwork] = useState(false);
     const [numberInputs, setNumberInputs] = useState([]);
 
@@ -37,7 +37,8 @@ const ServerSettings = () => {
             name: res.name || "",
             bind_ip: res.bindip || res.bind_ip || "0.0.0.0",
             port: res.port || 34197,
-            autostart: !!res.autostart
+            autostart: !!res.autostart,
+            watchdog_interval: res.watchdog_interval || 0
         });
     };
 
@@ -75,7 +76,8 @@ const ServerSettings = () => {
                 name: networkForm.name,
                 bind_ip: networkForm.bind_ip || "0.0.0.0",
                 port,
-                autostart: !!networkForm.autostart
+                autostart: !!networkForm.autostart,
+                watchdog_interval: parseInt(networkForm.watchdog_interval) || 0
             });
             await fetchServer();
             window.flash(t("saved"), "green");
@@ -218,6 +220,19 @@ const ServerSettings = () => {
                                     />
                                     <span className="text-sm">{t("controls.autostart")}</span>
                                 </label>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="block text-gray-500 font-bold text-sm">
+                                    {t("servers.watchdog_interval", "Watchdog interval (sec)")}
+                                </label>
+                                <input
+                                    className="shadow appearance-none border w-24 py-2 px-3 text-black"
+                                    type="number"
+                                    min="0"
+                                    value={networkForm.watchdog_interval}
+                                    onChange={e => setNetworkForm({...networkForm, watchdog_interval: e.target.value})}
+                                />
+                                <span className="text-xs text-gray-500">{t("servers.watchdog_hint", "0 = disabled. Reconnects RCON if server is running but unreachable.")}</span>
                             </div>
                             {server?.pending_restart ? (
                                 <div className="md:col-span-2 text-orange font-bold">
