@@ -8,9 +8,11 @@ run_setup() {
     echo "=== FSM Setup ==="
     echo ""
     read -p "Host IP (your server IP): " HOST_IP < /dev/tty
+    HOST_IP=$(echo "$HOST_IP" | sed 's|https\?://||g' | tr -d '/')
     while [ -z "$HOST_IP" ]; do
         echo "  Host IP is required!"
         read -p "Host IP (your server IP): " HOST_IP < /dev/tty
+        HOST_IP=$(echo "$HOST_IP" | sed 's|https\?://||g' | tr -d '/')
     done
     read -p "HTTP port [80]: " HTTP_PORT < /dev/tty
     HTTP_PORT=${HTTP_PORT:-80}
