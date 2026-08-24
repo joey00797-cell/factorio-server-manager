@@ -39,7 +39,11 @@ factorio-server-manager-windows:
 	GO111MODULE=on GOOS=windows GOARCH=amd64 CGO_ENABLED=0 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -ldflags="-extldflags=-static" -o ../factorio-server-manager/factorio-server-manager.exe .
 	@printf '@echo off\r\ncd /d "%%~dp0"\r\nif not exist "factorio\\bin\\x64\\factorio.exe" (\r\n  echo Factorio not found. Please download Factorio Server from https://www.factorio.com/download\r\n  echo and extract it to: %%~dp0factorio\r\n  pause\r\n  exit /b 1\r\n)\r\nstart factorio-server-manager.exe --port 8080 --dir "%%~dp0factorio" --servers-root "%%~dp0factorio-server"\r\n' > factorio-server-manager/start.bat
 
+ifeq ($(BUILD_WINDOWS),1)
 gen_release: build/factorio-server-manager-linux.zip build/factorio-server-manager-windows.zip
+else
+gen_release: build/factorio-server-manager-linux.zip
+endif
 	@echo "Done"
 
 clean:
