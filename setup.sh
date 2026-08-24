@@ -131,9 +131,23 @@ for member in z.infolist():
     cp ~/factorio-server-manager/docker/entrypoint.sh /tmp/fsm-output2/ && \
     docker build -f /tmp/Dockerfile-run -t my-fsm:latest /tmp/fsm-output2/ && \
     setup_macvlan && \
+    HOST_IP=$(ip route get 1 | awk '{print $7; exit}') && \
+    DISPLAY_IP=${CONTAINER_IP:-$HOST_IP} && \
+    cat > ${FSM_DATA}/setup.conf << SETUPCONF
+HOST_IP=${HOST_IP}
+HTTP_PORT=${HTTP_PORT}
+UDP_START=${UDP_START}
+UDP_END=${UDP_END}
+USE_MACVLAN=${USE_MACVLAN}
+CONTAINER_IP=${CONTAINER_IP}
+IFACE=${IFACE}
+SUBNET=${SUBNET}
+GATEWAY=${GATEWAY}
+SETUPCONF
     docker run -d \
         --name ofsm \
         $(get_network_args) \
+        -e FSM_SERVER_IP=${DISPLAY_IP} \
         -v ${FSM_DATA}:/opt/fsm-data \
         -v ${FACTORIO_DIR}:/opt/factorio-server \
         my-fsm:latest && \
