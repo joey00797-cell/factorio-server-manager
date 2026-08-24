@@ -1,24 +1,14 @@
-# Glibc is required for Factorio Server binaries to run
-FROM ubuntu
-
-ENV FACTORIO_VERSION=stable \
-    RCON_PASS=""
-
-VOLUME /opt/fsm-data /opt/factorio-server
-
-EXPOSE 80/tcp 34197/udp
-
-RUN apt-get update && apt-get install -y curl tar xz-utils unzip jq && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /opt
-
-# Install FSM
-COPY factorio-server-manager-linux.zip /factorio-server-manager-linux.zip
-RUN unzip /factorio-server-manager-linux.zip \
-    && rm /factorio-server-manager-linux.zip \
-    && mv factorio-server-manager fsm
-
-COPY entrypoint.sh /opt
-RUN sed -i 's/\r$//' /opt/entrypoint.sh && chmod u+x /opt/entrypoint.sh
-
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates xz-utils curl jq bash iproute2 && rm -rf /var/lib/apt/lists/*
+COPY entrypoint.sh /opt/entrypoint.sh
+COPY factorio-server-manager /opt/fsm/factorio-server-manager
+COPY app /opt/fsm/app
+COPY conf.json /opt/fsm/conf.json
+RUN chmod +x /opt/entrypoint.sh /opt/fsm/factorio-server-manager
+VOLUME /opt/fsm-data
+VOLUME /opt/factorio-server
+EXPOSE 80
+LABEL org.opencontainers.image.title="Factorio Server Manager"
+LABEL org.opencontainers.image.description="Docker image for Factorio Server Manager with interactive setup wizard"
+LABEL org.opencontainers.image.source="https://github.com/joey00797-cell/factorio-server-manager"
 ENTRYPOINT ["/opt/entrypoint.sh"]
