@@ -54,6 +54,11 @@ func NewRouter() *mux.Router {
 		Name("PublicLocalesGet").
 		HandlerFunc(LocalesGetHandler)
 
+	mainRouter.Path("/api/info").
+		Methods("GET").
+		Name("Info").
+		HandlerFunc(InfoHandler)
+
 	// API subrouter
 	// Serves all JSON REST handlers prefixed with /api
 	apiRouter := mainRouter.PathPrefix("/api").Subrouter()

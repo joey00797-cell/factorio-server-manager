@@ -3,6 +3,10 @@ import client from "../client";
 const serverPath = (serverId, suffix = "") => serverId ? `/api/servers/${serverId}${suffix}` : `/api/server${suffix}`;
 
 export default {
+    info: async () => {
+        const response = await client.get('/api/info');
+        return response.data;
+    },
     list: async () => {
         const response = await client.get('/api/servers');
         return response.data;

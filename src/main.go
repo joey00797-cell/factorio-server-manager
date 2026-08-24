@@ -42,7 +42,11 @@ func main() {
 	// Initialize HTTP router -- also initializes websocket
 	router := api.NewRouter()
 
-	log.Printf("FSM starting on: %s:%s", config.ServerIP, config.ServerPort)
-	log.Fatal(http.ListenAndServe(config.ServerIP+":"+config.ServerPort, router))
+	displayIP := config.ServerIP
+	if displayIP == "" || displayIP == "0.0.0.0" {
+		displayIP = "0.0.0.0"
+	}
+	log.Printf("FSM starting on: %s:%s", displayIP, config.ServerPort)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+config.ServerPort, router))
 
 }

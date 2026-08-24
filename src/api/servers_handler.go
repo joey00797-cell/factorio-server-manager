@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 	"github.com/gorilla/mux"
 )
@@ -221,6 +222,14 @@ func DeleteServerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = os.RemoveAll(server.Paths.Root)
 	resp = true
+}
+
+func InfoHandler(w http.ResponseWriter, r *http.Request) {
+	config := bootstrap.GetConfig()
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	WriteResponse(w, map[string]string{
+		"server_ip": config.ServerIP,
+	})
 }
 
 func SaveServerHandler(w http.ResponseWriter, r *http.Request) {

@@ -31,6 +31,14 @@ const Controls = () => {
     const [expandedDelete, setExpandedDelete] = useState(false);
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [createForm, setCreateForm] = useState(emptyCreate);
+
+    useEffect(() => {
+        serverResource.info().then(info => {
+            if (info.server_ip && info.server_ip !== "0.0.0.0") {
+                setCreateForm(f => ({...f, bind_ip: info.server_ip}));
+            }
+        }).catch(() => {});
+    }, []);
     const [nextPreview, setNextPreview] = useState({name: "", port: ""});
     const [savesByServer, setSavesByServer] = useState({});
     const [selectedSaveByServer, setSelectedSaveByServer] = useState({});
@@ -408,7 +416,18 @@ const Controls = () => {
 
 const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runAction, versionLabel, availableVersions, installedVersions, onUpdated, t}) => {
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const [serverInfo, setServerInfo] = useState({server_ip: ""});
     const [ipDraft, setIpDraft] = useState(server.bindip || server.bind_ip || "0.0.0.0");
+
+    useEffect(() => {
+        serverResource.info().then(info => {
+            setServerInfo(info);
+            const rawIp = server.bindip || server.bind_ip || "0.0.0.0";
+            if (rawIp === "0.0.0.0" && info.server_ip && info.server_ip !== "0.0.0.0") {
+                setIpDraft(info.server_ip);
+            }
+        }).catch(() => {});
+    }, []);
     const [portDraft, setPortDraft] = useState(server.port || "");
     const [fieldBusy, setFieldBusy] = useState(false);
 
