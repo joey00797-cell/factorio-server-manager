@@ -489,6 +489,29 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 		}
 	}
 
+	// Upsert manifest: enable downloaded mods
+	if db != nil {
+		manifest, mErr := EnsureManifest(db, serverID)
+		if mErr == nil {
+			for _, r := range results {
+				if r.Status != "downloaded" && r.Status != "already_installed" {
+					continue
+				}
+				var asset ModAsset
+				if db.Where("name = ? AND version = ?", r.Name, r.Version).First(&asset).Error != nil {
+					continue
+				}
+				var item ServerModManifestItem
+				err := db.Where("server_mod_manifest_id = ? AND mod_asset_id = ?", manifest.ID, asset.ID).First(&item).Error
+				if err == nil {
+					db.Model(&item).Update("enabled", true)
+				} else {
+					db.Exec("INSERT INTO server_mod_manifest_items (created_at, updated_at, deleted_at, server_mod_manifest_id, mod_asset_id, enabled, to_delete) VALUES (datetime('now'), datetime('now'), NULL, ?, ?, 1, 0)", manifest.ID, asset.ID)
+				}
+			}
+		}
+	}
+
 	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "done", Total: total, Mods: results, Warning: vanillaWarning})
 }
 

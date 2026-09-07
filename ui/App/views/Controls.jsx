@@ -31,11 +31,12 @@ const Controls = () => {
     const [expandedDelete, setExpandedDelete] = useState(false);
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [createForm, setCreateForm] = useState(emptyCreate);
+    const [hostIp, setHostIp] = useState("");
 
     useEffect(() => {
         serverResource.info().then(info => {
             if (info.server_ip && info.server_ip !== "0.0.0.0") {
-                setCreateForm(f => ({...f, bind_ip: info.server_ip}));
+                setHostIp(info.server_ip);
             }
         }).catch(() => {});
     }, []);
@@ -282,8 +283,8 @@ const Controls = () => {
                                         />
                                         <input
                                             className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
-                                            value={createForm.bind_ip}
-                                            onChange={e => setCreateForm({...createForm, bind_ip: e.target.value})}
+                                            value={createForm.bind_ip === "0.0.0.0" && hostIp ? hostIp : createForm.bind_ip}
+                                            onChange={e => setCreateForm({...createForm, bind_ip: e.target.value === hostIp ? "0.0.0.0" : e.target.value})}
                                         />
                                         <input
                                             className="shadow appearance-none border py-2 px-3 text-black flex-1 min-w-0"
@@ -392,7 +393,7 @@ const Controls = () => {
                 }
             />
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className={`grid gap-4 ${servers.length > 1 ? "xl:grid-cols-2" : ""}`}>
                 {servers.map(srv => (
                     <ServerCard
                         key={srv.id}
@@ -492,7 +493,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
         const trimmed = ipDraft.trim();
         const current = server.bindip || server.bind_ip || "0.0.0.0";
         if (trimmed && trimmed !== current) {
-            saveField("bind_ip", trimmed, () => setIpDraft(current));
+            saveField("bind_ip", trimmed === serverInfo.server_ip ? "0.0.0.0" : trimmed, () => setIpDraft(current));
         } else {
             setIpDraft(current);
         }
@@ -567,7 +568,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     />
                 </div>
                 <div>
-                    <div className="font-bold mb-1">{t("controls.f_version")}</div>
+                    <div className="font-bold mb-1">{t("controls.version", "Version")}</div>
                     <select
                         className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
                         value={versionDraft}
@@ -634,7 +635,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     {t("mods.title")}
                 </Link>
                 <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/server-settings`}>
-                    {t("server_settings.title")}
+                    {t("controls.settings", "Settings")}
                 </Link>
                 {running ? (
                     <Link className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange accentuated text-black font-bold text-center" to={`/servers/${server.id}/logs`}>

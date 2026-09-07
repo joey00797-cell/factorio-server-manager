@@ -199,29 +199,43 @@ func ModUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mods, resp, err := CreateNewModsForRequest(w, r)
-	if err != nil {
+	server, ok := serverFromRequest(r)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		resp = "server not found"
 		return
 	}
 
-	err = mods.UpdateMod(modData.Name, modData.DownloadUrl, modData.Filename)
+	db := GetDB()
+	asset, err := factorio.ImportPortalModToLibrary(db, modData.DownloadUrl, modData.Filename, modData.Name)
 	if err != nil {
 		resp = fmt.Sprintf("Error updating mod {%s}: %s", modData.Name, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	installedMods := mods.ListInstalledMods().ModsResult
-	for _, mod := range installedMods {
-		if mod.Name == modData.Name {
-			resp = mod
-			return
-		}
+	// Update manifest to use new asset
+	manifest, _ := factorio.EnsureManifest(db, server.ID)
+	// Find and update manifest item for this mod
+	var newItems []struct {
+		AssetID  uint `json:"asset_id"`
+		Enabled  bool `json:"enabled"`
+		ToDelete bool `json:"to_delete"`
 	}
+	for _, item := range manifest.Items {
+		aid := item.ModAssetID
+		if item.ModAsset.Name == modData.Name {
+			aid = asset.ID
+		}
+		newItems = append(newItems, struct {
+			AssetID  uint `json:"asset_id"`
+			Enabled  bool `json:"enabled"`
+			ToDelete bool `json:"to_delete"`
+		}{AssetID: aid, Enabled: item.Enabled, ToDelete: item.ToDelete})
+	}
+	factorio.UpdateManifestItems(db, server.ID, newItems)
 
-	resp = fmt.Sprintf(`Could not find mod %s`, modData.Name)
-	log.Println(resp)
-	w.WriteHeader(http.StatusNotFound)
+	resp = asset
 	return
 }
 

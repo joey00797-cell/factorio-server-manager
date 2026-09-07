@@ -33,6 +33,7 @@ func main() {
 
 	// setup required mod directories after legacy migration has resolved paths
 	factorio.ModStartUp()
+	factorio.StartSaveBackupScheduler()
 	manager.StartAutostartServers()
 
 	// Initialize authentication system

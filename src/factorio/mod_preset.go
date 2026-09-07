@@ -93,7 +93,7 @@ func GetPreset(serverID, name string) (PresetFile, error) {
 
 // SavePresetFromManifest creates or updates a preset from current manifest
 func SavePresetFromManifest(db *gorm.DB, serverID, name, description string) (PresetFile, error) {
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return PresetFile{}, err
 	}

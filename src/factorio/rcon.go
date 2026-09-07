@@ -4,8 +4,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
-
 	"github.com/OpenFactorioServerManager/rcon"
 )
 
@@ -15,11 +13,8 @@ func connectRC() error {
 
 func (server *Server) connectRC() error {
 	var err error
-	config := bootstrap.GetConfig()
 	host := "127.0.0.1"
-	if config.ServerIP != "" && config.ServerIP != "0.0.0.0" {
-		host = config.ServerIP
-	}
+	// Always connect to localhost - ServerIP is for display only
 	rconAddr := host + ":" + strconv.Itoa(server.rconPort())
 	server.Rcon, err = rcon.Dial(rconAddr, server.rconPass())
 	if err != nil {

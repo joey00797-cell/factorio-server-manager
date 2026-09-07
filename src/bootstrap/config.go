@@ -33,6 +33,7 @@ type Flags struct {
 	Autostart          string `long:"autostart" default:"false" description:"Autostart factorio server on bootup of FSM, default false [true/false]." env:"FSM_AUTOSTART"`
 	ModPackDir         string `long:"mod-pack-dir" default:"./mod_packs" description:"Directory to store mod packs." env:"FSM_MODPACK_DIR"`
 	LocalesDir         string `long:"locales-dir" default:"/opt/fsm-data/locales" description:"Directory to store custom locale files." env:"FSM_LOCALES_DIR"`
+	FsmDataDir         string `long:"fsm-data-dir" default:"/opt/fsm-data" description:"Directory for FSM persistent data (backups, db, logs)." env:"FSM_DATA_DIR"`
 }
 
 type Config struct {
@@ -42,6 +43,7 @@ type Config struct {
 	FactorioModsDir         string `json:"mods_dir,omitempty"`
 	FactorioModPackDir      string `json:"mod_pack_dir,omitempty"`
 	LocalesDir              string `json:"locales_dir,omitempty"`
+	FsmDataDir              string `json:"fsm_data_dir,omitempty"`
 	FactorioConfigFile      string `json:"config_file,omitempty"`
 	FactorioConfigDir       string `json:"config_directory,omitempty"`
 	FactorioLog             string `json:"logfile,omitempty"`
@@ -244,6 +246,7 @@ func (config *Config) mapFlags(flags Flags) {
 	config.FactorioModsDir = filepath.Join(flags.FactorioDir, "mods")
 	config.FactorioModPackDir = flags.ModPackDir
 	config.LocalesDir = flags.LocalesDir
+	config.FsmDataDir = flags.FsmDataDir
 	config.FactorioConfigDir = filepath.Join(flags.FactorioDir, "config")
 	config.FactorioConfigFile = filepath.Join(flags.FactorioDir, flags.FactorioConfigFile)
 	config.FactorioCredentialsFile = "./factorio.auth"

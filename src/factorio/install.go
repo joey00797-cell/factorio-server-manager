@@ -207,7 +207,7 @@ func (m *ServerManager) EnsureServerVersion(server *Server) error {
 				instanceRoot = filepath.Join(m.instanceDir, server.ID)
 			}
 			versionDir := cfg.FactorioDir
-			server.Paths = buildInstancePaths(instanceRoot, versionDir)
+			server.Paths = buildInstancePaths(instanceRoot, versionDir, server.ID, m.fsmDataDir)
 			server.Paths.FactorioBinary = manualBinary
 			return EnsureInstanceFiles(server.Paths)
 		}
@@ -244,7 +244,7 @@ func (m *ServerManager) EnsureServerVersion(server *Server) error {
 		instanceRoot = filepath.Join(m.instanceDir, server.ID)
 	}
 	server.VersionLabel = resolved
-	server.Paths = buildInstancePaths(instanceRoot, versionDir)
+	server.Paths = buildInstancePaths(instanceRoot, versionDir, server.ID, m.fsmDataDir)
 	if err := EnsureInstanceFiles(server.Paths); err != nil {
 		return err
 	}

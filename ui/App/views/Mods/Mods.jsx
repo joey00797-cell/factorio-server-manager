@@ -1,5 +1,5 @@
 import Panel from "../../components/Panel";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useMemo} from "react";
 import modsResource from "../../../api/resources/mods";
 import Button from "../../components/Button";
 import server from "../../../api/resources/server";
@@ -127,17 +127,12 @@ const Mods = () => {
         const asset = libraryMods.find(m => m.name === modName);
         if (!asset) return;
         const allItems = (manifest.items || []);
-        console.log('[deleteMod] modName:', modName, 'asset.id:', asset.id, 'typeof:', typeof asset.id);
-        console.log('[deleteMod] allItems:', JSON.stringify(allItems.map(i => ({asset_id: i.asset_id, enabled: i.enabled, type: typeof i.asset_id}))));
         const currentItems = allItems.map(i => ({
             asset_id: i.asset_id,
             enabled: i.enabled,
             to_delete: i.to_delete || false
         }));
-        console.log('[deleteMod] asset:', asset.id, typeof asset.id);
-        console.log('[deleteMod] allItems asset_ids:', allItems.map(i => ({id: i.asset_id, type: typeof i.asset_id, enabled: i.enabled})));
         const alreadyInManifest = allItems.find(i => i.asset_id === asset.id);
-        console.log('[deleteMod] alreadyInManifest:', alreadyInManifest);
 
         if (alreadyInManifest) {
             // Mark as to_delete in manifest -> Apply will delete from library
@@ -169,6 +164,7 @@ const Mods = () => {
     let disabled = serverStatus.running
 
     const manifestAssetIds = new Set((manifest.items || []).filter(i => !i.to_delete).map(i => i.asset && i.asset.name).filter(Boolean));
+    const activeAssetIds = useMemo(() => new Map((manifest.items || []).filter(i => !i.to_delete && i.asset).map(i => [i.asset.name, i.asset_id])), [manifest]);
 
     const onAddToPreset = async (mod, presetName) => {
         try {
@@ -181,7 +177,6 @@ const Mods = () => {
     };
 
     const onDLCToggle = async (dlcNames, enable) => {
-        console.log('[DLC toggle] names:', dlcNames, 'enable:', enable, 'libraryMods DLC:', libraryMods.filter(m => dlcNames.includes(m.name)));
         const allItems = (manifest.items || []);
         const currentItems = allItems.map(i => ({
             asset_id: i.asset_id,
@@ -203,10 +198,24 @@ const Mods = () => {
         setManifest(updated);
     };
 
+    const onVersionSwitch = async (mod) => {
+        // Replace existing version in manifest with new asset_id
+        const manifestItems = manifest.items || [];
+        const existingIdx = manifestItems.findIndex(i => i.asset && i.asset.name === mod.name);
+        const currentItems = manifestItems.map(i => ({asset_id: i.asset_id, enabled: i.enabled}));
+        let newItems;
+        if (existingIdx >= 0) {
+            newItems = currentItems.map((item, idx) =>
+                idx === existingIdx ? {asset_id: mod.id, enabled: item.enabled} : item
+            );
+        } else {
+            newItems = [...currentItems, {asset_id: mod.id, enabled: true}];
+        }
+        const updated = await modLibrary.manifest.update(serverId, newItems);
+        setManifest(updated);
+    };
+
     const onManifestToggle = async (mod) => {
-        console.log('[toggle] mod:', mod.name, 'id:', mod.id, 'inManifest check:', manifestAssetIds.has(mod.name));
-        console.log('[toggle] manifestAssetIds:', [...manifestAssetIds]);
-        console.log('[toggle] manifest.items:', JSON.stringify((manifest.items || []).map(i => ({asset_id: i.asset_id, name: i.asset?.name, enabled: i.enabled}))));
         const inManifest = manifestAssetIds.has(mod.name);
         const currentItems = (manifest.items || []).map(i => ({asset_id: i.asset_id, enabled: i.enabled}));
         let newItems;
@@ -258,6 +267,8 @@ const Mods = () => {
                              disabled={disabled}
                              manifestAssetIds={manifestAssetIds}
                              onManifestToggle={onManifestToggle}
+                             onVersionSwitch={onVersionSwitch}
+                             activeAssetIds={activeAssetIds}
                              onDLCToggle={onDLCToggle}
                              presets={presetList}
                              onAddToPreset={onAddToPreset}

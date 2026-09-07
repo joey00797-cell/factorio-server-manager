@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age']);
 
-const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null, onDLCToggle = null, presets = [], onAddToPreset = null}) => {
+const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null, onDLCToggle = null, presets = [], onAddToPreset = null, onVersionSwitch = null, activeAssetIds = null}) => {
     const { t } = useTranslation();
     const [sortField, setSortField] = useState(null);
     const [sortAsc, setSortAsc] = useState(true);
@@ -29,7 +29,6 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
     });
     const regularMods = sortedMods;
     const dlcEnabled = dlcMods.some(m => m.enabled);
-    console.log('[ModList] dlcMods:', dlcMods.map(m => ({name: m.name, enabled: m.enabled})), 'dlcEnabled:', dlcEnabled);
     const DLC_LIST = ["elevated-rails", "quality", "space-age"];
     const toggleDLC = () => {
         if (onDLCToggle !== null) {
@@ -109,9 +108,23 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                     ))}
                 </>)}
                 {/* Остальные моды */}
-                {factorioVersion !== null && regularMods.map(
-                    (mod, i) =>
-                        <Mod mod={mod} key={i}
+                {factorioVersion !== null && (() => {
+                    // Group mods by name, show one row per unique name
+                    const seen = new Set();
+                    const grouped = [];
+                    for (const mod of regularMods) {
+                        if (!seen.has(mod.name)) {
+                            seen.add(mod.name);
+                            grouped.push(mod);
+                        }
+                    }
+                    return grouped.map((mod, i) => {
+                        const allVersions = regularMods.filter(m => m.name === mod.name);
+                        // Active version = one in manifest by asset_id, fallback to first
+                        const activeId = activeAssetIds && activeAssetIds.get(mod.name);
+                        const activeMod = (activeId && allVersions.find(m => m.id === activeId)) || allVersions[0] || mod;
+                        return <Mod mod={activeMod} key={mod.name}
+                             allVersions={allVersions}
                              updateMod={updateMod}
                              toggleMod={toggleMod}
                              deleteMod={deleteMod}
@@ -120,10 +133,12 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                              disabled={disabled}
                              inManifest={manifestAssetIds !== null ? manifestAssetIds.has(mod.name) : null}
                              onManifestToggle={onManifestToggle}
+                             onVersionSwitch={onVersionSwitch}
                              presets={presets}
                              onAddToPreset={onAddToPreset}
-                        />
-                )}
+                        />;
+                    });
+                })()}
             </tbody>
         </table>
     );

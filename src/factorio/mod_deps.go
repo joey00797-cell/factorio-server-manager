@@ -89,7 +89,7 @@ func downloadAndImportMod(db *gorm.DB, release portalModRelease, modsDir string)
 // SyncDependencies resolves and downloads missing required dependencies
 // for all enabled mods in the manifest. Adds them to the library and manifest.
 func SyncDependencies(db *gorm.DB, serverID string) ([]ModSyncResult, error) {
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return nil, err
 	}

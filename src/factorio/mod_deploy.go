@@ -19,7 +19,7 @@ func jsonUnmarshal(data []byte, v interface{}) error {
 }
 
 // ensureManifest возвращает манифест сервера, создаёт если нет
-func ensureManifest(db *gorm.DB, serverID string) (ServerModManifest, error) {
+func EnsureManifest(db *gorm.DB, serverID string) (ServerModManifest, error) {
 	var manifest ServerModManifest
 	err := db.Preload("Items.ModAsset").Where("server_id = ?", serverID).First(&manifest).Error
 	if err == gorm.ErrRecordNotFound {
@@ -41,7 +41,7 @@ func ensureManifest(db *gorm.DB, serverID string) (ServerModManifest, error) {
 
 // GetManifest возвращает манифест сервера для API
 func GetManifest(db *gorm.DB, serverID string) (ManifestResult, error) {
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return ManifestResult{}, err
 	}
@@ -67,7 +67,7 @@ func UpdateManifestItems(db *gorm.DB, serverID string, items []struct {
 	Enabled   bool `json:"enabled"`
 	ToDelete  bool `json:"to_delete"`
 }) (ManifestResult, error) {
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return ManifestResult{}, err
 	}
@@ -105,7 +105,7 @@ func ResetManifestToDeployed(db *gorm.DB, serverID string) (ManifestResult, erro
 		return ManifestResult{}, err
 	}
 
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return ManifestResult{}, err
 	}
@@ -284,7 +284,7 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 
 // PreviewApply вычисляет diff между желаемым и реальным состоянием
 func PreviewApply(db *gorm.DB, serverID string) (ModApplyPreview, error) {
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return ModApplyPreview{}, err
 	}
@@ -405,7 +405,7 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 	}
 	server := serverObj
 
-	manifest, err := ensureManifest(db, serverID)
+	manifest, err := EnsureManifest(db, serverID)
 	if err != nil {
 		return ModApplyPreview{}, err
 	}

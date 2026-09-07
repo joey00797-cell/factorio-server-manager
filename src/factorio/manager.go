@@ -36,7 +36,9 @@ type InstancePaths struct {
 	LogsDir        string `json:"logs_dir"`
 	ConsoleLogFile string `json:"console_log_file"`
 	FactorioLog    string `json:"factorio_log"`
-	ModSettingsDat string `json:"mod_settings_dat"`
+	ModSettingsDat      string `json:"mod_settings_dat"`
+	BackupsDir          string `json:"backups_dir"`
+	BackupScheduleFile  string `json:"backup_schedule_file"`
 }
 
 type ServerRecord struct {
@@ -67,6 +69,7 @@ type ServerManager struct {
 	downloadDir string
 	versionDir  string
 	instanceDir string
+	fsmDataDir  string
 	installMu   sync.Mutex
 	catalog     ServerCatalog
 	servers     map[string]*Server
@@ -82,6 +85,7 @@ func InitServerManager() (*ServerManager, error) {
 		downloadDir: filepath.Join(config.ServersRoot, "downloads"),
 		versionDir:  filepath.Join(config.ServersRoot, "versions"),
 		instanceDir: filepath.Join(config.ServersRoot, "instances"),
+		fsmDataDir:  config.FsmDataDir,
 		servers:     make(map[string]*Server),
 	}
 
@@ -220,7 +224,7 @@ func (m *ServerManager) migrateLegacy(config bootstrap.Config) error {
 
 	versionDir := filepath.Join(m.versionDir, version)
 	instanceRoot := filepath.Join(m.instanceDir, DefaultServerID)
-	paths := buildInstancePaths(instanceRoot, versionDir)
+	paths := buildInstancePaths(instanceRoot, versionDir, DefaultServerID, m.fsmDataDir)
 	if err := createInstanceDirs(paths); err != nil {
 		return err
 	}
@@ -401,7 +405,7 @@ func (m *ServerManager) CreateServer(name, version, bindIP string, port int, aut
 
 	versionDir := filepath.Join(m.versionDir, resolvedVersion)
 	instanceRoot := filepath.Join(m.instanceDir, id)
-	paths := buildInstancePaths(instanceRoot, versionDir)
+	paths := buildInstancePaths(instanceRoot, versionDir, id, m.fsmDataDir)
 	if err := EnsureInstanceFiles(paths); err != nil {
 		return nil, err
 	}
@@ -587,7 +591,7 @@ func (server *Server) loadMetadata() error {
 	return nil
 }
 
-func buildInstancePaths(instanceRoot, versionDir string) InstancePaths {
+func buildInstancePaths(instanceRoot, versionDir, serverID, fsmDataDir string) InstancePaths {
 	configDir := filepath.Join(instanceRoot, "config")
 	modsDir := filepath.Join(instanceRoot, "mods")
 	logsDir := filepath.Join(instanceRoot, "logs")
@@ -607,12 +611,14 @@ func buildInstancePaths(instanceRoot, versionDir string) InstancePaths {
 		LogsDir:        logsDir,
 		ConsoleLogFile: filepath.Join(logsDir, "factorio-server-console.log"),
 		FactorioLog:    filepath.Join(logsDir, "factorio-current.log"),
-		ModSettingsDat: filepath.Join(modsDir, "mod-settings.dat"),
+		ModSettingsDat:      filepath.Join(modsDir, "mod-settings.dat"),
+		BackupsDir:          filepath.Join(fsmDataDir, "backups", serverID),
+		BackupScheduleFile:  filepath.Join(fsmDataDir, "backups", serverID, "backup-schedule.json"),
 	}
 }
 
 func createInstanceDirs(paths InstancePaths) error {
-	for _, dir := range []string{paths.Root, paths.SavesDir, paths.ModsDir, paths.ModPackDir, paths.ConfigDir, paths.LogsDir} {
+	for _, dir := range []string{paths.Root, paths.SavesDir, paths.ModsDir, paths.ModPackDir, paths.ConfigDir, paths.LogsDir, paths.BackupsDir} {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
