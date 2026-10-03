@@ -13,7 +13,7 @@ module.exports = (env, argv) => {
         output: {
             filename: '[name].js',
             path: path.resolve(__dirname, 'app'),
-            publicPath: ""
+            publicPath: "/"
         },
         resolve: {
             alias: {
