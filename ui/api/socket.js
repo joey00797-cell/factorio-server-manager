@@ -123,7 +123,8 @@ function connect() {
     }
 
     socket.onopen = e => {
-        registerEventEmitter(socket)
+        registerEventEmitter(socket);
+        bus.emit("reconnect");
     }
 }
 

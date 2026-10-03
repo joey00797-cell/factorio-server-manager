@@ -463,6 +463,7 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 	var syncRequest struct {
 		Name     string   `json:"saveFile"`
 		ModNames []string `json:"modNames"`
+		Mode     string   `json:"mode"` // "match" or "add"
 	}
 
 	var err error
@@ -497,7 +498,7 @@ func SyncModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go factorio.SyncModsFromSaveForDir(GetDB(), savePath, serverModsDir(server), server.ID, syncRequest.ModNames)
+	go factorio.SyncModsFromSaveForDir(GetDB(), savePath, serverModsDir(server), server.ID, syncRequest.ModNames, syncRequest.Mode)
 	resp = map[string]string{"status": "started"}
 }
 

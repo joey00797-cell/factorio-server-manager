@@ -22,6 +22,7 @@ var dlcMods = []ModAsset{
 	{Name: "space-age", Title: "Space Age", SourceType: "dlc", FileName: "", ArtifactPath: ""},
 	{Name: "elevated-rails", Title: "Elevated Rails", SourceType: "dlc", FileName: "", ArtifactPath: ""},
 	{Name: "quality", Title: "Quality", SourceType: "dlc", FileName: "", ArtifactPath: ""},
+	{Name: "recycler", Title: "Recycler", SourceType: "dlc", FileName: "", ArtifactPath: ""},
 }
 
 // EnsureDLCAssets создаёт записи DLC модов в библиотеке если их нет

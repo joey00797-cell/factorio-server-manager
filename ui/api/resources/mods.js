@@ -39,8 +39,8 @@ const mods = {
         const response = await client.post(`${savesBase(serverId)}/mods/list`, {saveFile});
         return response.data;
     },
-    syncFromSave: async (saveFile, modNames, serverId) => {
-        const response = await client.post(`${savesBase(serverId)}/mods/sync`, {saveFile, modNames});
+    syncFromSave: async (saveFile, modNames, serverId, mode) => {
+        const response = await client.post(`${savesBase(serverId)}/mods/sync`, {saveFile, modNames, mode: mode || "add"});
         return response.data;
     },
     downloadAllURL: serverId => `${base(serverId)}/download`,
