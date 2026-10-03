@@ -84,7 +84,7 @@ const Mod = ({mod, factorioVersion, toggleMod, deleteMod, updateMod, addUpdatabl
 
             })();
         }
-    }, [mod]);
+    }, [mod.name, mod.version, disabled, factorioVersion]);
 
     const isCompatible = () => {
         if (!factorioVersion || !mod.factorio_version) return true;

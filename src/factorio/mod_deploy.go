@@ -299,6 +299,7 @@ func PreviewApply(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 	if err != nil {
 		return ModApplyPreview{}, err
 	}
+	desired = dropShadowedVersions(desired)
 
 	deployed, err := deployedState(server)
 	if err != nil {
@@ -396,6 +397,7 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 		return ModApplyPreview{}, err
 	}
 	if !preview.CanApply {
+		log.Printf("ApplyManifest: cannot apply for server %s, issues=%d running=%v", serverID, len(preview.Issues), preview.NeedsServerStop)
 		return preview, nil
 	}
 
@@ -436,6 +438,18 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 	var items []ServerModManifestItem
 	db.Preload("ModAsset").Where("server_mod_manifest_id = ?", manifest.ID).Find(&items)
 
+	// Names that have at least one enabled version in the manifest
+	enabledNames := map[string]bool{}
+	seenDisabled := map[string]bool{}
+	for _, it := range items {
+		if it.ToDelete || it.ModAsset.ID == 0 || it.ModAsset.SourceType == "dlc" {
+			continue
+		}
+		if it.Enabled {
+			enabledNames[it.ModAsset.Name] = true
+		}
+	}
+
 	for _, item := range items {
 		// Skip mods marked for deletion
 		if item.ToDelete {
@@ -453,6 +467,13 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 		if item.ModAsset.ID == 0 {
 			log.Printf("Warning: mod asset id=%d not found in library, skipping", item.ModAssetID)
 			continue
+		}
+		// Disabled version is shadowed by an enabled one (or by another disabled one) - do not deploy
+		if !item.Enabled {
+			if enabledNames[item.ModAsset.Name] || seenDisabled[item.ModAsset.Name] {
+				continue
+			}
+			seenDisabled[item.ModAsset.Name] = true
 		}
 		src, err := os.Open(item.ModAsset.ArtifactPath)
 		if err != nil {
@@ -495,7 +516,7 @@ func ApplyManifest(db *gorm.DB, serverID string) (ModApplyPreview, error) {
 		db.Unscoped().Delete(&item)
 	}
 
-	log.Printf("Applied manifest for server %s: +%d -%d", serverID, len(preview.ToAdd), len(preview.ToRemove))
+	log.Printf("Applied manifest for server %s: +%d -%d (enable:%d disable:%d)", serverID, len(preview.ToAdd), len(preview.ToRemove), len(preview.ToEnable), len(preview.ToDisable))
 	return PreviewApply(db, serverID)
 }
 
@@ -503,4 +524,28 @@ func sortModStates(states []ModDeployState) {
 	sort.Slice(states, func(i, j int) bool {
 		return states[i].Name < states[j].Name
 	})
+}
+
+// dropShadowedVersions removes disabled versions of a mod when another version
+// of the same mod is enabled. mod-list.json is keyed by name only, so keeping
+// both produces duplicate entries and a permanent diff.
+func dropShadowedVersions(states []ModDeployState) []ModDeployState {
+	enabled := map[string]bool{}
+	for _, s := range states {
+		if !s.IsDLC && s.Enabled {
+			enabled[s.Name] = true
+		}
+	}
+	seen := map[string]bool{}
+	out := make([]ModDeployState, 0, len(states))
+	for _, s := range states {
+		if !s.IsDLC && !s.Enabled {
+			if enabled[s.Name] || seen[s.Name] {
+				continue
+			}
+			seen[s.Name] = true
+		}
+		out = append(out, s)
+	}
+	return out
 }

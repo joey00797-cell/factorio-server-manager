@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import Button from "../../../components/Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faExternalLinkAlt, faUpload, faSave, faGlobe} from "@fortawesome/free-solid-svg-icons";
@@ -14,6 +14,8 @@ import socket from "../../../../api/socket";
 const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = []}) => {
     const {t} = useTranslation();
     const [isApplying, setIsApplying] = useState(false);
+    const [syncMismatched, setSyncMismatched] = useState([]);
+    const [applyOverrides, setApplyOverrides] = useState({});
 
     // Upload ZIP
     const [uploadFile, setUploadFile] = useState(null);
@@ -24,6 +26,9 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
     const [selectedSave, setSelectedSave] = useState("");
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncingDeps, setIsSyncingDeps] = useState(false);
+    const [syncDropdown, setSyncDropdown] = useState(false);
+    const [syncCurrentMode, setSyncCurrentMode] = useState("full");
+    const syncCurrentModeRef = useRef("full");
 
     // Portal
     const [isPortalAuth, setIsPortalAuth] = useState(false);
@@ -55,17 +60,30 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
             const data = typeof raw === "string" ? JSON.parse(raw) : raw;
             if (data.status === "done") {
                 setIsSyncing(false);
-                window.flash(t("mods.sync_success", "Mods synced from save"), "green");
-                try { if (onModUploaded) onModUploaded(); } catch(e) { console.error("onModUploaded error:", e); }
+                const mismatched = (data.mods || []).filter(m => m.status === "version_mismatch");
+                setSyncMismatched(mismatched);
+                const doRefresh = (result) => {
+                    try { if (onModUploaded) onModUploaded(); } catch(e) { console.error("onModUploaded error:", e); }
+                    try { if (onApplied) onApplied(result); } catch(e) { console.error("onApplied error:", e); }
+                };
+                if (syncCurrentModeRef.current === "match") {
+                    modLibrary.manifest.apply(serverId).then(doRefresh).catch(e => { console.error("apply error:", e); doRefresh(); });
+                } else {
+                    doRefresh();
+                }
+                if (mismatched.length === 0) window.flash(t("mods.sync_success", "Mods synced from save"), "green");
             } else if (data.status === "error") {
                 setIsSyncing(false);
                 window.flash(t("mods.sync_error", "Sync failed: ") + (data.message || ""), "red");
             }
         };
+        const resubscribe = () => socket.emit('mods sync subscribe', serverId);
         socket.on(room, handler);
+        socket.on("reconnect", resubscribe);
         socket.emit('mods sync subscribe', serverId);
         return () => {
             socket.off(room, handler);
+            socket.off("reconnect", resubscribe);
             socket.emit('mods sync unsubscribe', serverId);
         };
     }, [serverId]);
@@ -140,11 +158,14 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
         }
     };
 
-    const syncFromSave = async () => {
+    const syncFromSave = async (mode) => {
         if (!selectedSave) return;
+        setSyncDropdown(false);
+        setSyncCurrentMode(mode);
+        syncCurrentModeRef.current = mode;
         setIsSyncing(true);
         try {
-            await modsResource.syncFromSave(selectedSave, [], serverId);
+            await modsResource.syncFromSave(selectedSave, [], serverId, mode);
         } catch (e) {
             setIsSyncing(false);
             window.flash(t("mods.sync_error", "Sync failed"), "red");
@@ -173,6 +194,30 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
     const applyManifest = async () => {
         setIsApplying(true);
         try {
+            // Apply overrides: update manifest to exclude unchecked items
+            const currentItems = (await modLibrary.manifest.get(serverId))?.items || [];
+            const toAdd = (preview.to_add || []).filter(m => applyOverrides[m.name] !== false);
+            const toRemove = (preview.to_remove || []).filter(m => applyOverrides[m.name] !== false);
+            const toEnable = (preview.to_enable || []).filter(m => applyOverrides[m.name] !== false);
+            const toDisable = (preview.to_disable || []).filter(m => applyOverrides[m.name] !== false);
+            const removeNames = new Set(toRemove.map(m => m.name));
+            const disableNames = new Set(toDisable.map(m => m.name));
+            const enableNames = new Set(toEnable.map(m => m.name));
+            const addNames = new Set(toAdd.map(m => m.name));
+            let newItems = currentItems
+                .filter(i => !removeNames.has(i.asset?.name))
+                .map(i => ({
+                    asset_id: i.asset_id,
+                    enabled: disableNames.has(i.asset?.name) ? false : enableNames.has(i.asset?.name) ? true : i.enabled
+                }));
+            // Add new items from to_add
+            for (const m of toAdd) {
+                const libMod = (libraryMods || []).find(lm => lm.name === m.name);
+                if (libMod) newItems.push({asset_id: libMod.id, enabled: true});
+            }
+            if (Object.values(applyOverrides).some(v => !v)) {
+                await modLibrary.manifest.update(serverId, newItems);
+            }
             const result = await modLibrary.manifest.apply(serverId);
             window.flash(t("mods.apply_success", "Mods applied successfully"), "green");
             if (onApplied) onApplied(result);
@@ -194,6 +239,12 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
     };
 
     const hasPreview = preview && ((preview.to_add?.length || 0) + (preview.to_remove?.length || 0) + (preview.to_enable?.length || 0) + (preview.to_disable?.length || 0) > 0);
+    React.useEffect(() => {
+        if (!hasPreview) { setApplyOverrides({}); return; }
+        const overrides = {};
+        [...(preview.to_add || []), ...(preview.to_remove || []), ...(preview.to_enable || []), ...(preview.to_disable || [])].forEach(m => { overrides[m.name] = true; });
+        setApplyOverrides(overrides);
+    }, [hasPreview, preview]);
 
     return (
         <>
@@ -211,9 +262,24 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                         {saves.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
                     </select>
                     {selectedSave && (
-                        <Button size="sm" type="success" onClick={syncFromSave} isLoading={isSyncing}>
-                            {t("mods.sync", "Sync")}
-                        </Button>
+                        <span className="relative inline-block">
+                            <Button size="sm" type="success" isLoading={isSyncing}
+                                onClick={e => { e.stopPropagation(); setSyncDropdown(d => !d); }}>
+                                {t("mods.sync", "Sync")}
+                            </Button>
+                            {syncDropdown && (
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 z-50 shadow-lg" style={{minWidth: "180px"}}>
+                                    <div className="px-3 py-2 cursor-pointer hover:bg-orange text-black text-sm"
+                                        onClick={() => syncFromSave("match")}>
+                                        Match save — enable save mods, disable others
+                                    </div>
+                                    <div className="px-3 py-2 cursor-pointer hover:bg-orange text-black text-sm"
+                                        onClick={() => syncFromSave("add")}>
+                                        Add from save — only enable save mods
+                                    </div>
+                                </div>
+                            )}
+                        </span>
                     )}
                 </div>
 
@@ -268,6 +334,26 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                 </div>
             </div>
 
+            {/* Version Mismatch */}
+            {syncMismatched.length > 0 && (
+                <div className="mb-4 p-3 bg-orange text-black">
+                    <div className="font-bold text-sm mb-2">⚠ Version mismatch — library has different versions:</div>
+                    {syncMismatched.map(m => (
+                        <div key={m.name} className="text-sm flex justify-between">
+                            <span>{m.name}</span>
+                            <span>save: {m.version} · library: {m.available_version}</span>
+                        </div>
+                    ))}
+                    <div className="text-xs mt-2 opacity-75">Log in to mod portal to download exact versions, or use library versions.</div>
+                    <div className="flex gap-2 mt-3">
+                        <button className="px-3 py-1 bg-black text-white text-xs hover:bg-gray-800"
+                            onClick={() => setSyncMismatched([])}>
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Apply Preview */}
             {hasPreview && (
                 <div className="mb-4">
@@ -282,11 +368,23 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                         <div className="grid grid-cols-2 gap-4 mb-3">
                             <div>
                                 <div className="font-bold text-green mb-1">{t("mods.to_add", "To Add")} ({preview.to_add?.length || 0})</div>
-                                {(preview.to_add || []).map(m => <div key={m.name}>{m.name} {m.version}</div>)}
+                                {(preview.to_add || []).map(m => (
+                                    <div key={m.name} className="flex items-center gap-2">
+                                        <input type="checkbox" checked={applyOverrides[m.name] !== false}
+                                            onChange={e => setApplyOverrides(p => ({...p, [m.name]: e.target.checked}))}/>
+                                        <span className={applyOverrides[m.name] === false ? "line-through opacity-50" : ""}>{m.name} {m.version}</span>
+                                    </div>
+                                ))}
                             </div>
                             <div>
                                 <div className="font-bold text-red mb-1">{t("mods.to_remove", "To Remove")} ({preview.to_remove?.length || 0})</div>
-                                {(preview.to_remove || []).map(m => <div key={m.name}>{m.name} {m.version}</div>)}
+                                {(preview.to_remove || []).map(m => (
+                                    <div key={m.name} className="flex items-center gap-2">
+                                        <input type="checkbox" checked={applyOverrides[m.name] !== false}
+                                            onChange={e => setApplyOverrides(p => ({...p, [m.name]: e.target.checked}))}/>
+                                        <span className={applyOverrides[m.name] === false ? "line-through opacity-50" : ""}>{m.name} {m.version}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                         <div className="flex gap-2">

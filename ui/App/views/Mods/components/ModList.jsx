@@ -4,7 +4,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faCheck, faTimes, faToggleOff, faToggleOn, faChevronDown, faChevronRight} from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
 
-const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age']);
+const DLC_MODS = new Set(['elevated-rails', 'quality', 'space-age', 'recycler']);
 
 const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpdatableMod = null, disabled = false, manifestAssetIds = null, onManifestToggle = null, onDLCToggle = null, presets = [], onAddToPreset = null, onVersionSwitch = null, activeAssetIds = null}) => {
     const { t } = useTranslation();
@@ -29,7 +29,8 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
     });
     const regularMods = sortedMods;
     const dlcEnabled = dlcMods.some(m => m.enabled);
-    const DLC_LIST = ["elevated-rails", "quality", "space-age"];
+    const dlcPartial = dlcEnabled && !dlcMods.every(m => m.enabled);
+    const DLC_LIST = ["elevated-rails", "quality", "space-age", "recycler"];
     const toggleDLC = () => {
         if (onDLCToggle !== null) {
             // Manifest-based toggle for DLC
@@ -71,13 +72,9 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                                 ? dlcEnabled
                                     ? <FontAwesomeIcon className="text-green" icon={faCheck}/>
                                     : <FontAwesomeIcon className="text-red" icon={faTimes}/>
-                                : onManifestToggle !== null
-                                    ? (dlcEnabled
-                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>
+                                : (dlcEnabled
+                                        ? <FontAwesomeIcon className={`cursor-pointer hover:text-green-light ${dlcPartial ? "text-orange" : "text-green"}`} icon={faToggleOn} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>
                                         : <FontAwesomeIcon className="cursor-pointer hover:text-gray text-gray-500" icon={faToggleOff} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>)
-                                    : (dlcEnabled
-                                        ? <FontAwesomeIcon className="cursor-pointer hover:text-green-light text-green" icon={faToggleOn} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>
-                                        : <FontAwesomeIcon className="cursor-pointer hover:text-red-light text-red" icon={faToggleOff} onClick={e => { e.stopPropagation(); toggleDLC(); }}/>)
                             }
                         </td>
                         <td className="pr-4"><FontAwesomeIcon className="text-green" icon={faCheck}/></td>
@@ -131,7 +128,7 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
                              addUpdatableMod={addUpdatableMod}
                              factorioVersion={factorioVersion}
                              disabled={disabled}
-                             inManifest={manifestAssetIds !== null ? manifestAssetIds.has(mod.name) : null}
+                             inManifest={manifestAssetIds !== null ? (manifestAssetIds.has(mod.name) && !!activeMod.enabled) : null}
                              onManifestToggle={onManifestToggle}
                              onVersionSwitch={onVersionSwitch}
                              presets={presets}

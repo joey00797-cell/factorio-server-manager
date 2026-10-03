@@ -5,13 +5,13 @@ import (
 	"compress/flate"
 	"compress/zlib"
 	"encoding/json"
-	"gorm.io/gorm"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"context"
 	"sync"
+	"gorm.io/gorm"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
 )
@@ -68,9 +68,10 @@ func CancelSync() {
 }
 
 type ModSyncResult struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Status  string `json:"status"` // downloaded, already_installed, builtin, not_found
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	Status           string `json:"status"` // downloaded, already_installed, builtin, not_found, version_mismatch
+	AvailableVersion string `json:"available_version,omitempty"`
 }
 
 type ModSyncProgress struct {
@@ -92,6 +93,7 @@ var baseModNames = map[string]bool{
 	"elevated-rails": true,
 	"quality":        true,
 	"space-age":      true,
+	"recycler":       true,
 }
 
 // isVanillaSave — true если сейв создан без геймплейных модов
@@ -284,10 +286,10 @@ func SyncModsFromSave(savePath string, modNames []string) {
 	if modsDir == "" {
 		return
 	}
-	SyncModsFromSaveForDir(nil, savePath, modsDir, DefaultServerID, modNames)
+	SyncModsFromSaveForDir(nil, savePath, modsDir, DefaultServerID, modNames, "add")
 }
 
-func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, serverID string, modNames []string) {
+func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, serverID string, modNames []string, mode string) {
 	if !beginModsSync(serverID) {
 		log.Println("SyncModsFromSave: already syncing, skipping")
 		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: "sync already in progress"})
@@ -295,7 +297,7 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 	}
 	defer endModsSync(serverID)
 
-	// 1. Читаем список модов из сейва
+	// 1. Read mods from save
 	f, err := OpenArchiveFile(savePath, "level.dat", "level-init.dat")
 	if err != nil {
 		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot open save: %v", err)})
@@ -309,7 +311,7 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 		return
 	}
 
-	// 1.5. Читаем полный список модов из level.dat0
+	// 1.5. Read full mod list from level.dat0
 	levelMods, err := readModsFromLevelDat(savePath)
 	if err != nil {
 		log.Printf("SyncModsFromSave: cannot read level.dat0, falling back to header: %v", err)
@@ -321,33 +323,20 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 		log.Printf("SyncModsFromSave: loaded %d mods from level.dat0", len(header.Mods))
 	}
 
-	// 1.6. Проверяем тип сейва
+	// 1.6. Vanilla save check
 	var vanillaWarning string
 	if isVanillaSave(header.Mods) {
-		vanillaWarning = "Сейв создан без геймплейных модов. Моды могли быть добавлены позже — синхронизация может быть неполной."
-		log.Println("SyncModsFromSave: vanilla save detected, mods may have been added later")
+		vanillaWarning = "Save has no gameplay mods. Mods may have been added later — sync may be incomplete."
+		log.Println("SyncModsFromSave: vanilla save detected")
 	}
 
-	// 2. Читаем установленные моды
-	mods, err := NewMods(modsDir)
-	if err != nil {
-		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot read installed mods: %v", err)})
-		return
-	}
-
-	// 3. Map установленных: name -> version (из info.json, формат "1.2.3")
-	installed := make(map[string]string)
-	for _, m := range mods.ModInfoList.Mods {
-		installed[m.Name] = m.Version
-	}
-
-	// Строим set модов для скачивания если передан список
+	// Build filter set
 	filterMods := make(map[string]bool)
 	for _, name := range modNames {
 		filterMods[name] = true
 	}
 
-	// 4. Обходим все моды из сейва — собираем результаты
+	// 2. Process each mod from save
 	var results []ModSyncResult
 	var toDownload []Mod
 
@@ -355,28 +344,109 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 		if saveMod.Name == "base" {
 			continue
 		}
-		// Если передан список — качаем только выбранные
 		if len(filterMods) > 0 && !filterMods[saveMod.Name] {
 			continue
 		}
 		wantVersion := normalizeVersion(saveMod.Version)
-		if gotVersion, ok := installed[saveMod.Name]; ok && gotVersion == wantVersion {
-			log.Printf("SyncModsFromSave: %s %s already installed, skipping", saveMod.Name, wantVersion)
+
+		// DLC/base mods — no file needed
+		if baseModNames[saveMod.Name] {
 			results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "already_installed"})
 			continue
 		}
+
+		if db != nil {
+			// Exact version in library?
+			var asset ModAsset
+			if db.Where("name = ? AND version = ? AND source_type != ?", saveMod.Name, wantVersion, "dlc").First(&asset).Error == nil {
+				log.Printf("SyncModsFromSave: %s %s found in library (exact)", saveMod.Name, wantVersion)
+				upsertManifestItem(db, serverID, asset.ID, true)
+				results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "already_installed"})
+				continue
+			}
+			// Any version in library?
+			var anyAsset ModAsset
+			if db.Where("name = ? AND source_type != ?", saveMod.Name, "dlc").Order("created_at DESC").First(&anyAsset).Error == nil {
+				// Check if portal is available for exact version
+				credsCheck := Credentials{}
+				portalOk := false
+				if ok, err := credsCheck.Load(); err == nil && ok && credsCheck.Username != "" {
+					portalOk = true
+				}
+				if portalOk {
+					// Queue for portal download of exact version
+					toDownload = append(toDownload, saveMod)
+					continue
+				}
+				log.Printf("SyncModsFromSave: %s version mismatch — save wants %s, library has %s", saveMod.Name, wantVersion, anyAsset.Version)
+				results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "version_mismatch", AvailableVersion: anyAsset.Version})
+				continue
+			}
+		}
+		// Not in library — need portal
 		toDownload = append(toDownload, saveMod)
 	}
 
+	// Match save mode: disable mods not in save
+	if mode == "match" && db != nil {
+		saveModNames := make(map[string]bool)
+		for _, r := range results {
+			saveModNames[r.Name] = true
+		}
+		for _, m := range toDownload {
+			saveModNames[m.Name] = true
+		}
+		manifest, mErr := EnsureManifest(db, serverID)
+		if mErr == nil {
+			var items []ServerModManifestItem
+			db.Where("server_mod_manifest_id = ? AND enabled = 1", manifest.ID).Find(&items)
+			for _, item := range items {
+				var asset ModAsset
+				if db.First(&asset, item.ModAssetID).Error == nil {
+					if !saveModNames[asset.Name] && asset.SourceType != "dlc" {
+						db.Model(&item).Update("enabled", false)
+						log.Printf("SyncModsFromSave: disabled %s (not in save)", asset.Name)
+					}
+				}
+			}
+		}
+	}
+
 	total := len(toDownload)
-	log.Printf("SyncModsFromSave: %d mods to download", total)
+	log.Printf("SyncModsFromSave: %d mods need portal download", total)
 
 	if total == 0 {
+		// Also upsert DLC manifest items
+		if db != nil {
+			for _, r := range results {
+				if r.Status != "already_installed" {
+					continue
+				}
+				if baseModNames[r.Name] {
+					var dlcAsset ModAsset
+					if db.Where("name = ? AND source_type = ?", r.Name, "dlc").First(&dlcAsset).Error == nil {
+						upsertManifestItem(db, serverID, dlcAsset.ID, true)
+					}
+				}
+			}
+		}
 		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "done", Total: 0, Mods: results, Warning: vanillaWarning})
 		return
 	}
 
-	// 5. Собираем релизы и считаем общий размер
+	// Check portal credentials
+	creds := Credentials{}
+	portalReady := false
+	if ok, err := creds.Load(); err == nil && ok && creds.Username != "" {
+		portalReady = true
+	}
+	log.Printf("SyncModsFromSave: portalReady=%v toDownload=%d", portalReady, total)
+	if !portalReady {
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: "Some mods are missing from the library. Log in to the mod portal to download them.", Mods: results})
+		return
+	}
+
+	// 3. Download missing mods from portal
 	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "calculating", Total: total})
 	releases := make([]portalModRelease, len(toDownload))
 	var totalBytes int64
@@ -393,10 +463,8 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 	}
 	var currentBytes int64
 
-// 6. Качаем недостающие
 	for i, saveMod := range toDownload {
 		wantVersion := normalizeVersion(saveMod.Version)
-
 		sendSyncProgressForServer(serverID, ModSyncProgress{
 			Status:       "progress",
 			Current:      i + 1,
@@ -406,16 +474,13 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 			TotalBytes:   totalBytes,
 		})
 
-		// Сначала проверяем локальный список DLC/базовых модов
 		if baseModNames[saveMod.Name] {
-			log.Printf("SyncModsFromSave: %s is builtin/DLC (local list), skipping", saveMod.Name)
 			results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "builtin"})
 			continue
 		}
 
 		release, err := getModRelease(saveMod.Name, wantVersion)
 		if err == ErrModNotOnPortal {
-			log.Printf("SyncModsFromSave: %s is builtin/DLC, skipping", saveMod.Name)
 			results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "builtin"})
 			continue
 		}
@@ -425,35 +490,35 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 			continue
 		}
 
-		mods, err = NewMods(modsDir)
-		if err != nil {
-			sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot refresh mods: %v", err)})
-			return
-		}
-
 		currentModIdx := i
 		if db != nil {
-			// Download to mod library
-			_, libErr := ImportPortalModToLibrary(db, release.DownloadURL, release.FileName, saveMod.Name)
+			asset, libErr := ImportPortalModToLibrary(db, release.DownloadURL, release.FileName, saveMod.Name)
 			if libErr != nil {
 				results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "not_found"})
 				log.Printf("SyncModsFromSave: download failed for %s: %v", saveMod.Name, libErr)
 				continue
 			}
-			err = nil
-		} else if err = mods.DownloadModWithProgress(release.DownloadURL, release.FileName, saveMod.Name, func(cur int64, total int64) {
-			sendSyncProgressForServer(serverID, ModSyncProgress{
-				Status:       "progress",
-				Current:      currentModIdx + 1,
-				Total:        len(toDownload),
-				Mod:          saveMod.Name,
-				CurrentBytes: currentBytes + cur,
-				TotalBytes:   totalBytes,
-			})
-		}); err != nil {
-			results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "not_found"})
-			log.Printf("SyncModsFromSave: download failed for %s: %v", saveMod.Name, err)
-			continue
+			upsertManifestItem(db, serverID, asset.ID, true)
+		} else {
+			mods, modErr := NewMods(modsDir)
+			if modErr != nil {
+				sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: fmt.Sprintf("cannot refresh mods: %v", modErr)})
+				return
+			}
+			if err = mods.DownloadModWithProgress(release.DownloadURL, release.FileName, saveMod.Name, func(cur int64, tot int64) {
+				sendSyncProgressForServer(serverID, ModSyncProgress{
+					Status:       "progress",
+					Current:      currentModIdx + 1,
+					Total:        len(toDownload),
+					Mod:          saveMod.Name,
+					CurrentBytes: currentBytes + cur,
+					TotalBytes:   totalBytes,
+				})
+			}); err != nil {
+				results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "not_found"})
+				log.Printf("SyncModsFromSave: download failed for %s: %v", saveMod.Name, err)
+				continue
+			}
 		}
 
 		results = append(results, ModSyncResult{Name: saveMod.Name, Version: wantVersion, Status: "downloaded"})
@@ -463,68 +528,44 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 		log.Printf("SyncModsFromSave: downloaded %s %s (%d/%d)", saveMod.Name, wantVersion, i+1, total)
 	}
 
-	// Обновляем mod-list.json — включаем нужные, выключаем лишние
-	finalMods, err := NewMods(modsDir)
-	if err == nil {
-		// Строим set модов из сейва
-		saveModSet := make(map[string]bool)
-		for _, saveMod := range header.Mods {
-			if saveMod.Name != "base" {
-				saveModSet[saveMod.Name] = true
-			}
-		}
-		// Включаем моды из сейва, выключаем остальные
-		for i, m := range finalMods.ModSimpleList.Mods {
-			if m.Name == "base" {
-				continue
-			}
-			if saveModSet[m.Name] {
-				finalMods.ModSimpleList.Mods[i].Enabled = true
-			} else {
-				finalMods.ModSimpleList.Mods[i].Enabled = false
-			}
-		}
-		if saveErr := finalMods.ModSimpleList.saveModInfoJson(); saveErr != nil {
-			log.Printf("SyncModsFromSave: error saving mod-list.json: %v", saveErr)
-		}
-	}
-
-	// Upsert manifest: enable downloaded mods
-	if db != nil {
-		manifest, mErr := EnsureManifest(db, serverID)
-		if mErr == nil {
-			for _, r := range results {
-				if r.Status != "downloaded" && r.Status != "already_installed" {
-					continue
-				}
-				var asset ModAsset
-				if db.Where("name = ? AND version = ?", r.Name, r.Version).First(&asset).Error != nil {
-					continue
-				}
-				var item ServerModManifestItem
-				err := db.Where("server_mod_manifest_id = ? AND mod_asset_id = ?", manifest.ID, asset.ID).First(&item).Error
-				if err == nil {
-					db.Model(&item).Update("enabled", true)
-				} else {
-					db.Exec("INSERT INTO server_mod_manifest_items (created_at, updated_at, deleted_at, server_mod_manifest_id, mod_asset_id, enabled, to_delete) VALUES (datetime('now'), datetime('now'), NULL, ?, ?, 1, 0)", manifest.ID, asset.ID)
-				}
-			}
-		}
-	}
-
 	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "done", Total: total, Mods: results, Warning: vanillaWarning})
 }
 
-// ModStatus — статус мода при сравнении сейва с установленными
+// upsertManifestItem enables a mod asset in the server manifest
+func upsertManifestItem(db *gorm.DB, serverID string, assetID uint, enabled bool) {
+	manifest, err := EnsureManifest(db, serverID)
+	if err != nil {
+		log.Printf("upsertManifestItem: cannot ensure manifest: %v", err)
+		return
+	}
+	// Drop other versions of the same mod from this manifest (library is untouched)
+	var targetAsset ModAsset
+	if enabled && db.First(&targetAsset, assetID).Error == nil {
+		db.Exec(`DELETE FROM server_mod_manifest_items
+			WHERE server_mod_manifest_id=?
+			AND mod_asset_id != ?
+			AND to_delete = 0
+			AND mod_asset_id IN (SELECT id FROM mod_assets WHERE name=? AND deleted_at IS NULL)`,
+			manifest.ID, assetID, targetAsset.Name)
+	}
+	var item ServerModManifestItem
+	if db.Where("server_mod_manifest_id = ? AND mod_asset_id = ?", manifest.ID, assetID).First(&item).Error == nil {
+		db.Model(&item).Update("enabled", enabled)
+	} else {
+		db.Exec("INSERT INTO server_mod_manifest_items (created_at, updated_at, deleted_at, server_mod_manifest_id, mod_asset_id, enabled, to_delete) VALUES (datetime('now'), datetime('now'), NULL, ?, ?, ?, 0)", manifest.ID, assetID, enabled)
+	}
+}
+
+
+// ModStatus describes a mod from save vs installed state
 type ModStatus struct {
 	Name             string `json:"name"`
-	VersionRequired  string `json:"version_required"`  // версия в сейве
-	VersionInstalled string `json:"version_installed"` // версия установленная (если есть)
-	Status           string `json:"status"`            // missing, installed, wrong_version, builtin
+	VersionRequired  string `json:"version_required"`
+	VersionInstalled string `json:"version_installed"`
+	Status           string `json:"status"` // missing, installed, wrong_version, builtin
 	PortalURL        string `json:"portal_url"`
 }
 
-// GetModsFromSave читает моды из сейва и сравнивает с установленными
 func GetModsFromSave(savePath string) ([]ModStatus, error) {
 	modsDir := ""
 	if manager := GetServerManager(); manager != nil {

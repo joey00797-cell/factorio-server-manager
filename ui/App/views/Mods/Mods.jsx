@@ -221,7 +221,7 @@ const Mods = () => {
         let newItems;
         if (inManifest) {
             const asset = (manifest.items || []).find(i => i.asset && i.asset.name === mod.name);
-            newItems = currentItems.filter(i => i.asset_id !== (asset && asset.asset_id));
+            newItems = currentItems.map(i => i.asset_id === (asset && asset.asset_id) ? {...i, enabled: !i.enabled} : i);
         } else {
             newItems = [...currentItems, {asset_id: mod.id, enabled: true}];
         }
@@ -243,7 +243,7 @@ const Mods = () => {
                 :
                 <TabControl onChange={setActiveTab}>
                     <Tab title={t("mods.mod_library", "Mod Library")}>
-                        <ModLibrary serverId={serverId} onModUploaded={fetchLibraryMods} preview={preview} libraryMods={libraryMods} onApplied={(result) => { setPreview(result); fetchLibraryMods(); fetchManifest(); }}/>
+                        <ModLibrary serverId={serverId} onModUploaded={fetchLibraryMods} preview={preview} libraryMods={libraryMods} onApplied={(result) => { setPreview(result); fetchLibraryMods(); fetchManifest(); fetchInstalledMods(); }}/>
                     </Tab>
                     <Tab title={t("mods.mod_options", "Mod Options")}>
                         <ModOptionsTab serverId={serverId}/>
