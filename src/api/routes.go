@@ -306,6 +306,12 @@ var apiRoutes = Routes{
 		UpdateSaveBackupScheduleHandler,
 		false,
 	}, {
+		"WipeServerInstance",
+		"POST",
+		"/servers/{serverID}/wipe",
+		WipeServerInstanceHandler,
+		true,
+	}, {
 		"RunSaveBackup",
 		"POST",
 		"/servers/{serverID}/saves/backups/run",
