@@ -1,6 +1,8 @@
 package api
 
 import (
+	"syscall"
+	"net"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,8 +34,12 @@ type JSONResponseFileInput struct {
 
 func WriteResponse(w http.ResponseWriter, data interface{}) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// client went away (F5, closed tab): nothing to report or to send
+		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, net.ErrClosed) {
+			return
+		}
+		// headers are already sent at this point, so no second WriteHeader
 		log.Printf("Error writing response: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
