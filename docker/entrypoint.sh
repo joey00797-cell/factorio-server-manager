@@ -138,6 +138,25 @@ SCRIPT2
 
     chmod +x /opt/fsm-data/fsm-start.sh
 
+    # docker-compose.yml for Windows/Mac (no macvlan, relative data path)
+    cat > /opt/fsm-data/docker-compose.yml << COMPOSE
+services:
+  fsm:
+    image: ${IMAGE}
+    container_name: fsm
+    restart: unless-stopped
+    environment:
+      FSM_SERVER_IP: "${HOST_IP}"
+    ports:
+      - "${HTTP_PORT}:80"
+      - "${UDP_START}-${UDP_END}:${UDP_START}-${UDP_END}/udp"
+    volumes:
+      - .:/opt/fsm-data
+      - factorio-server:/opt/factorio-server
+volumes:
+  factorio-server:
+COMPOSE
+
     # Generate fsm-start.bat for Windows (no macvlan)
     cat > /opt/fsm-data/fsm-start.bat << BATCH
 @echo off
@@ -147,6 +166,7 @@ docker run -d ^
     --name fsm ^
     -p ${HTTP_PORT}:80 ^
     -p ${UDP_START}-${UDP_END}:${UDP_START}-${UDP_END}/udp ^
+    -e FSM_SERVER_IP=${HOST_IP} ^
     -v C:\\fsm-data:/opt/fsm-data ^
     -v C:\\factorio-server:/opt/factorio-server ^
     ${IMAGE}
@@ -164,7 +184,9 @@ BATCH
     echo "    bash /opt/fsm-data/fsm-start.sh"
     echo ""
     echo "  Start (Windows):"
-    echo "    C:\\fsm-data\\fsm-start.bat"
+    echo "    cd C:\\fsm-data && docker compose up -d"
+    echo "    (or C:\\fsm-data\\fsm-start.bat)"
+    echo "    Setup on Windows must be run with: -v C:\\fsm-data:/opt/fsm-data"
     echo ""
     echo "  Alias (optional):"
     echo "    echo \"alias fsm='bash /opt/fsm-data/fsm-start.sh'\" >> ~/.bashrc"
