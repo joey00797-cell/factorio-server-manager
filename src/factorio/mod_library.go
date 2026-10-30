@@ -269,6 +269,11 @@ func ImportUploadedModToLibrary(db *gorm.DB, file multipart.File, header *multip
 
 // ImportPortalModToLibrary скачивает мод с портала и импортирует в библиотеку
 func ImportPortalModToLibrary(db *gorm.DB, downloadURL, fileName, modName string) (ModAsset, error) {
+	return ImportPortalModToLibraryProgress(db, downloadURL, fileName, modName, nil)
+}
+
+// ImportPortalModToLibraryProgress is the same with download progress reporting.
+func ImportPortalModToLibraryProgress(db *gorm.DB, downloadURL, fileName, modName string, onProgress func(cur, total int64)) (ModAsset, error) {
 	if err := ensureModLibraryDir(); err != nil {
 		return ModAsset{}, err
 	}
@@ -286,7 +291,11 @@ func ImportPortalModToLibrary(db *gorm.DB, downloadURL, fileName, modName string
 	}
 	defer resp.Body.Close()
 
-	return ImportModZipToLibrary(db, resp.Body, fileName, "portal", modName)
+	var body interface{ Read(p []byte) (int, error) } = resp.Body
+	if onProgress != nil {
+		body = &throttledReader{r: resp.Body, total: resp.ContentLength, cb: onProgress}
+	}
+	return ImportModZipToLibrary(db, body, fileName, "portal", modName)
 }
 
 // ListModAssets возвращает все моды в библиотеке

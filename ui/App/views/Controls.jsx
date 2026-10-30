@@ -1,3 +1,4 @@
+import ProgressBar from "../components/ProgressBar";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
 import Panel from "../components/Panel";
@@ -33,6 +34,15 @@ const Controls = () => {
     const [createForm, setCreateForm] = useState(emptyCreate);
     const [hostIp, setHostIp] = useState("");
     const [canInstall, setCanInstall] = useState(true);
+    const [installStatus, setInstallStatus] = useState(null);
+    useEffect(() => {
+        const active = Object.values(busyVersion).some(v => v === "downloading" || v === "creating");
+        if (!active) { setInstallStatus(null); return; }
+        const id = setInterval(() => {
+            serverResource.installStatus().then(s => setInstallStatus(s && s.installing ? s : null)).catch(() => {});
+        }, 300);
+        return () => clearInterval(id);
+    }, [busyVersion]);
 
     useEffect(() => {
         serverResource.info().then(info => {
@@ -190,6 +200,9 @@ const Controls = () => {
         try {
             await serverResource.deleteInstalledVersion(version);
             setInstalledVersions(prev => prev.filter(v => v !== version));
+        } catch (e) {
+            const d = e.response && e.response.data;
+            window.flash(typeof d === "string" ? d : (d && d.error) || "Delete failed", "red");
         } finally {
             setBusyVersion(prev => ({...prev, [version]: null}));
             setExpandedDelete(false);
@@ -401,6 +414,10 @@ const Controls = () => {
                                 </div>
                             );
                         })()}
+                        {installStatus && <ProgressBar
+                            label={"Factorio " + installStatus.version}
+                            percent={installStatus.progress}
+                            detail={installStatus.progress >= 100 ? "extracting..." : installStatus.progress + "%"}/>}
                     </div>
                 }
             />

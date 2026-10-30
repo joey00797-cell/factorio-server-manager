@@ -235,26 +235,13 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 			continue
 		}
 
-		optional := false
-		incompatible := false
-		switch {
-		case strings.HasPrefix(dep, "!"):
-			incompatible = true
-			dep = trimDepPrefix(dep, "!")
-		case strings.HasPrefix(dep, "(?)"):
-			optional = true
-			dep = trimDepPrefix(dep, "(?)")
-		case strings.HasPrefix(dep, "?"), strings.HasPrefix(dep, "~"):
-			optional = true
-			dep = dep[1:]
-			dep = strings.TrimSpace(dep)
-		}
-
-		parts := strings.Fields(dep)
-		if len(parts) == 0 {
+		spec, ok := parseDepSpec(dep)
+		if !ok {
 			continue
 		}
-		name := parts[0]
+		name := spec.Name
+		optional := spec.Optional
+		incompatible := spec.Incompatible
 
 		if incompatible {
 			if _, exists := enabledByName[name]; exists {
@@ -268,7 +255,14 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 		}
 
 		if name == "base" {
-			continue // версию base проверяем отдельно если нужно
+			if spec.Op != "" && baseVersion != "" && !versionSatisfies(baseVersion, spec.Op, spec.Version) {
+				issues = append(issues, ModPreviewIssue{
+					Level:   "error",
+					Code:    "factorio_version",
+					Message: fmt.Sprintf("Mod %s %s needs Factorio %s %s, server has %s", asset.Name, asset.Version, spec.Op, spec.Version, baseVersion),
+				})
+			}
+			continue
 		}
 
 		if _, exists := enabledByName[name]; !exists && !optional {

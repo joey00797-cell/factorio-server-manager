@@ -37,3 +37,19 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	}
 	return n, err
 }
+
+func setInstall(s InstallStatus) {
+	installMu.Lock()
+	currentInstall = s
+	installMu.Unlock()
+}
+
+func setInstallProgress(version string, pct int) {
+	installMu.Lock()
+	if currentInstall.Progress != pct || !currentInstall.Installing {
+		currentInstall.Installing = true
+		currentInstall.Version = version
+		currentInstall.Progress = pct
+	}
+	installMu.Unlock()
+}

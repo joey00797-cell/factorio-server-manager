@@ -1,3 +1,4 @@
+import ProgressBar from "../../../components/ProgressBar";
 import React, {useEffect, useRef, useState} from "react";
 import Button from "../../../components/Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -25,6 +26,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
     const [saves, setSaves] = useState([]);
     const [selectedSave, setSelectedSave] = useState("");
     const [isSyncing, setIsSyncing] = useState(false);
+    const [syncProgress, setSyncProgress] = useState(null);
     const [isSyncingDeps, setIsSyncingDeps] = useState(false);
     const [syncDropdown, setSyncDropdown] = useState(false);
     const [syncCurrentMode, setSyncCurrentMode] = useState("full");
@@ -58,8 +60,17 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
         console.log("Subscribing to room:", room, "serverId:", serverId, typeof serverId);
         const handler = (raw) => {
             const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+            if (data.status === "progress_end") {
+                setSyncProgress(null);
+                return;
+            }
+            if (data.status === "progress" || data.status === "calculating") {
+                setSyncProgress(data);
+                return;
+            }
             if (data.status === "done") {
                 setIsSyncing(false);
+                setSyncProgress(null);
                 const mismatched = (data.mods || []).filter(m => m.status === "version_mismatch");
                 setSyncMismatched(mismatched);
                 const doRefresh = (result) => {
@@ -74,6 +85,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                 if (mismatched.length === 0) window.flash(t("mods.sync_success", "Mods synced from save"), "green");
             } else if (data.status === "error") {
                 setIsSyncing(false);
+                setSyncProgress(null);
                 window.flash(t("mods.sync_error", "Sync failed: ") + (data.message || ""), "red");
             }
         };
@@ -414,12 +426,23 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                 </div>
             )}
 
+            {syncProgress && (
+                <div className="mt-2">
+                    <ProgressBar
+                        label={syncProgress.mod ? `Mod ${syncProgress.current}/${syncProgress.total}: ${syncProgress.mod}` : "Calculating..."}
+                        percent={syncProgress.total_bytes ? Math.round(100 * (syncProgress.current_bytes || 0) / syncProgress.total_bytes) : (syncProgress.total ? Math.round(100 * (syncProgress.current || 0) / syncProgress.total) : 0)}
+                        detail={syncProgress.total_bytes ? `${((syncProgress.current_bytes || 0) / 1048576).toFixed(1)} / ${(syncProgress.total_bytes / 1048576).toFixed(1)} MB` : ""}
+                    />
+                </div>
+            )}
+
             {isModalOpen && (
                 <SelectVersionForm
                     releases={releases}
                     install={importRelease}
                     isOpen={isModalOpen}
                     setIsOpen={setIsModalOpen}
+                    close={() => setIsModalOpen(false)}
                     serverId={serverId}
                     factorioVersion={null}
                 />

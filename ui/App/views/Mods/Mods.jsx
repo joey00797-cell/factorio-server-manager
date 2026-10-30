@@ -229,6 +229,27 @@ const Mods = () => {
         setManifest(updated);
     };
 
+    const [bulkMenu, setBulkMenu] = useState(false);
+    const bulkSet = async (mode) => {
+        const items = manifest.items || [];
+        const isDlc = i => i.asset && i.asset.source_type === "dlc";
+        if (mode === "purge") {
+            const keep = items.filter(isDlc).map(i => ({asset_id: i.asset_id, enabled: i.enabled, to_delete: false}));
+            const drop = libraryMods.filter(a => a.source_type !== "dlc").map(a => ({asset_id: a.id, enabled: false, to_delete: true}));
+            setManifest(await modLibrary.manifest.update(serverId, [...keep, ...drop]));
+            return;
+        }
+        const newItems = items
+            .filter(i => mode !== "remove" || isDlc(i))
+            .map(i => ({
+                asset_id: i.asset_id,
+                enabled: isDlc(i) || i.to_delete ? i.enabled : (mode === "enable"),
+                to_delete: i.to_delete || false
+            }));
+        const updated = await modLibrary.manifest.update(serverId, newItems);
+        setManifest(updated);
+    };
+
     return (
         <div>
             <ServerScopeHeader/>
@@ -283,6 +304,15 @@ const Mods = () => {
                             <Button size="sm" className="mr-2" isLoading={isUpdatingAllMods}
                                     onClick={updateAllMods}>{t("mods.update_all")}</Button>
                         }
+                        {!disabled && <>
+                            <Button size="sm" className="mr-2" type="success" onClick={() => bulkSet("enable")}>Enable all</Button>
+                            <Button size="sm" className="mr-2" type="default" onClick={() => bulkSet("disable")}>Disable all</Button>
+                            {bulkMenu ? <>
+                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("remove"); }}>From server</Button>
+                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("purge"); }}>From library (permanent)</Button>
+                                <Button size="sm" className="mr-2" type="default" onClick={() => setBulkMenu(false)}>Cancel</Button>
+                            </> : <Button size="sm" className="mr-2" type="danger" onClick={() => setBulkMenu(true)}>Remove all</Button>}
+                        </>}
                         <a className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold"
                            href={modsResource.downloadAllURL(serverId)}>{t("mods.download_all")}</a>
                         <span className="ml-2"><CreatePreset serverId={serverId} onSuccess={fetchPresets}/></span>

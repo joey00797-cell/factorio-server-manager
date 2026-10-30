@@ -118,6 +118,9 @@ type portalModRelease struct {
 	FileName    string `json:"file_name"`
 	Version     string `json:"version"`
 	FileSize    int64  `json:"file_size"`
+	InfoJSON    struct {
+		FactorioVersion string `json:"factorio_version"`
+	} `json:"info_json"`
 }
 
 type portalModInfo struct {

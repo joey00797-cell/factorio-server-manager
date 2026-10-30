@@ -26,25 +26,13 @@ func parseRequiredDeps(deps []string) []parsedDep {
 		if dep == "" {
 			continue
 		}
-		optional := false
-		incompatible := false
-		switch {
-		case strings.HasPrefix(dep, "!"):
-			incompatible = true
-			dep = trimDepPrefix(dep, "!")
-		case strings.HasPrefix(dep, "(?)"):
-			optional = true
-			dep = trimDepPrefix(dep, "(?)")
-		case strings.HasPrefix(dep, "?"), strings.HasPrefix(dep, "~"):
-			optional = true
-			dep = dep[1:]
-			dep = strings.TrimSpace(dep)
-		}
-		parts := strings.Fields(dep)
-		if len(parts) == 0 {
+		spec, ok := parseDepSpec(dep)
+		if !ok {
 			continue
 		}
-		name := parts[0]
+		name := spec.Name
+		optional := spec.Optional
+		incompatible := spec.Incompatible
 		if name == "base" {
 			continue
 		}
@@ -76,6 +64,19 @@ func getLatestCompatibleRelease(modName string, baseVersion string) (portalModRe
 	// Return latest release (last in list)
 	if len(info.Releases) == 0 {
 		return portalModRelease{}, fmt.Errorf("no releases found for %s", modName)
+	}
+	if baseVersion != "" {
+		mm := baseVersion
+		if parts := strings.Split(baseVersion, "."); len(parts) >= 2 {
+			mm = parts[0] + "." + parts[1]
+		}
+		for i := len(info.Releases) - 1; i >= 0; i-- {
+			fv := info.Releases[i].InfoJSON.FactorioVersion
+			if fv == "" || fv == mm {
+				return info.Releases[i], nil
+			}
+		}
+		return portalModRelease{}, fmt.Errorf("no release of %s for Factorio %s", modName, mm)
 	}
 	return info.Releases[len(info.Releases)-1], nil
 }
@@ -171,8 +172,10 @@ func SyncDependencies(db *gorm.DB, serverID string) ([]ModSyncResult, error) {
 			continue
 		}
 
-		modsDir := serverObj.modsDir()
-		importedAsset, err := downloadAndImportMod(db, release, modsDir)
+		_ = serverObj
+		importedAsset, err := ImportPortalModToLibraryProgress(db, release.DownloadURL, release.FileName, "", func(cur, total int64) {
+			sendSyncProgressForServer(serverID, ModSyncProgress{Status: "progress", Current: len(results) + 1, Total: len(results) + len(queue) + 1, Mod: depName, CurrentBytes: cur, TotalBytes: total})
+		})
 		if err != nil {
 			log.Printf("SyncDependencies: cannot download %s: %v", depName, err)
 			results = append(results, ModSyncResult{Name: depName, Version: release.Version, Status: "error"})
@@ -194,6 +197,8 @@ func SyncDependencies(db *gorm.DB, serverID string) ([]ModSyncResult, error) {
 			}
 		}
 	}
+
+	sendSyncProgressForServer(serverID, ModSyncProgress{Status: "progress_end"})
 
 	// Save updated manifest items
 	items := make([]struct {

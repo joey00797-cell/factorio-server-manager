@@ -5,7 +5,12 @@ import ReactDOM from 'react-dom/client';
 import App from './App/App.jsx';
 import i18n from './App/i18n.js';
 
-window.flash = (message, color="gray-light") => Bus.emit('flash', ({message, color}));
+window.flash = (message, color="gray-light") => {
+    if (message && typeof message === "object") {
+        message = message.error || message.message || JSON.stringify(message);
+    }
+    Bus.emit('flash', ({message: String(message), color}));
+};
 
 const Root = () => {
     const [ready, setReady] = useState(i18n.isInitialized);

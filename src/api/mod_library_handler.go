@@ -93,7 +93,14 @@ func ImportPortalModToLibraryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	asset, err := factorio.ImportPortalModToLibrary(GetDB(), data.DownloadURL, data.FileName, data.ModName)
+	label := data.ModName
+	if label == "" {
+		label = data.FileName
+	}
+	asset, err := factorio.ImportPortalModToLibraryProgress(GetDB(), data.DownloadURL, data.FileName, data.ModName, func(cur, total int64) {
+		factorio.SendLibraryProgress(factorio.ModSyncProgress{Status: "progress", Current: 1, Total: 1, Mod: label, CurrentBytes: cur, TotalBytes: total})
+	})
+	factorio.SendLibraryProgress(factorio.ModSyncProgress{Status: "progress_end"})
 	if err != nil {
 		resp = fmt.Sprintf("Error importing mod from portal: %s", err)
 		log.Println(resp)

@@ -166,7 +166,10 @@ func (m *ServerManager) EnsureVersionInstalled(requested string) (string, error)
 		out.Close()
 		return "", fmt.Errorf("download returned HTTP %d", resp.StatusCode)
 	}
-	if _, err := io.Copy(out, resp.Body); err != nil {
+	setInstall(InstallStatus{Installing: true, Version: resolved})
+	defer setInstall(InstallStatus{})
+	body := &ProgressReader{Reader: resp.Body, Total: resp.ContentLength, OnProgress: func(pct int) { setInstallProgress(resolved, pct) }}
+	if _, err := io.Copy(out, body); err != nil {
 		out.Close()
 		return "", err
 	}
