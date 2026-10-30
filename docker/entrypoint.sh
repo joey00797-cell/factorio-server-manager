@@ -365,4 +365,8 @@ tail -f $LOG_FILE &
 TAIL_PID=$!
 trap "kill $FSM_PID $TAIL_PID 2>/dev/null" INT TERM
 wait $FSM_PID
+FSM_CODE=$?
+sleep 1
 kill $TAIL_PID 2>/dev/null
+echo "FSM exited with code $FSM_CODE"
+exit $FSM_CODE
