@@ -99,7 +99,7 @@ const Badge = ({label, value, tone}) => {
     const toneClass = tone === "green" ? "text-green" : tone === "red" ? "text-red" : "text-dirty-white";
     return (
         <div className="bg-gray-dark px-3 py-2 accentuated">
-            <span className="font-bold">{label}: </span>
+            <span className="font-bold text-dirty-white">{label}: </span>
             <span className={toneClass}>{value}</span>
         </div>
     );

@@ -86,6 +86,7 @@ type ModPreviewIssue struct {
 	Level   string `json:"level"` // "error" | "warning"
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	Params  map[string]string `json:"params,omitempty"`
 }
 
 // ModApplyPreview — diff между желаемым и реальным состоянием

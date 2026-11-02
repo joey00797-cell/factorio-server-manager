@@ -62,7 +62,7 @@ const Login = ({handleLogin}) => {
                             <Error error={errors.password} message={t("login.password_error_message")}/>
                         </div>
                         <div className="text-center">
-                            <Button type="success" className="w-full" isSubmit={true}>Sign In</Button>
+                            <Button type="success" className="w-full" isSubmit={true}>{t("login.sign_in", "Sign In")}</Button>
                         </div>
                     </form>
                 }

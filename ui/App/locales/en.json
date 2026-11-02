@@ -151,7 +151,13 @@
         "other_version": "other...",
         "other_version_hint": "Enter a specific Factorio version number, e.g. 2.0.76. Full list: factorio.com/download/archive",
         "settings": "Settings",
-        "version": "Version"
+        "version": "Version",
+        "badge_installed_cached": "✓ installed · zip cached",
+        "badge_installed": "✓ installed",
+        "badge_cached": "zip cached · not installed",
+        "badge_no_zip": "not installed · no zip",
+        "badge_not_installed": "not installed",
+        "no_version": "No Factorio version installed. Run prepare-factorio.bat and reload the page."
     },
     "servers": {
         "create": "Create server",
@@ -251,7 +257,14 @@
         "upload": "Upload",
         "upload_error": "Upload failed",
         "upload_success": "Mod uploaded to library",
-        "upload_zip": "⬆ Upload ZIP..."
+        "upload_zip": "⬆ Upload ZIP...",
+        "sync_match": "Match save — enable save mods, disable others",
+        "sync_add": "Add from save — only enable save mods",
+        "mod_settings_missing": "mod-settings.dat does not exist yet for this server",
+        "issue_missing_dependency": "Mod {{mod}} {{version}} requires {{dep}}",
+        "issue_incompatible_mod": "Mod {{mod}} {{version}} is incompatible with {{dep}}",
+        "issue_factorio_version": "Mod {{mod}} {{version}} needs Factorio {{op}} {{need}}, server has {{have}}",
+        "issue_server_running": "Server must be stopped before applying mods."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",

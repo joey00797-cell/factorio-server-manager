@@ -152,7 +152,13 @@
         "other_version": "другая...",
         "other_version_hint": "Введите номер версии Factorio, например 2.0.76. Полный список: factorio.com/download/archive",
         "settings": "Настройки",
-        "version": "Версия"
+        "version": "Версия",
+        "badge_installed_cached": "✓ установлена · zip в кеше",
+        "badge_installed": "✓ установлена",
+        "badge_cached": "zip в кеше · не установлена",
+        "badge_no_zip": "не установлена · нет zip",
+        "badge_not_installed": "не установлена",
+        "no_version": "Версия Factorio не установлена. Запусти prepare-factorio.bat и перезагрузи страницу."
     },
     "servers": {
         "create": "Создать сервер",
@@ -252,7 +258,14 @@
         "upload": "Загрузить",
         "upload_error": "Ошибка загрузки",
         "upload_success": "Мод загружен в библиотеку",
-        "upload_zip": "⬆ Загрузить ZIP..."
+        "upload_zip": "⬆ Загрузить ZIP...",
+        "sync_match": "Как в сохранении — включить моды сейва, остальные выключить",
+        "sync_add": "Добавить из сейва — только включить моды сейва",
+        "mod_settings_missing": "Файл mod-settings.dat для этого сервера ещё не создан",
+        "issue_missing_dependency": "Моду {{mod}} {{version}} требуется {{dep}}",
+        "issue_incompatible_mod": "Мод {{mod}} {{version}} несовместим с {{dep}}",
+        "issue_factorio_version": "Моду {{mod}} {{version}} нужен Factorio {{op}} {{need}}, на сервере {{have}}",
+        "issue_server_running": "Перед применением модов нужно остановить сервер."
     },
     "login": {
         "login_failed_message": "Ошибка входа. Неверное имя пользователя или пароль.",

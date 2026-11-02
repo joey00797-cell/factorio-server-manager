@@ -249,6 +249,7 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 					Level:   "error",
 					Code:    "incompatible_mod",
 					Message: fmt.Sprintf("Mod %s %s incompatible with %s", asset.Name, asset.Version, name),
+					Params:  map[string]string{"mod": asset.Name, "version": asset.Version, "dep": name},
 				})
 			}
 			continue
@@ -260,6 +261,7 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 					Level:   "error",
 					Code:    "factorio_version",
 					Message: fmt.Sprintf("Mod %s %s needs Factorio %s %s, server has %s", asset.Name, asset.Version, spec.Op, spec.Version, baseVersion),
+					Params:  map[string]string{"mod": asset.Name, "version": asset.Version, "op": spec.Op, "need": spec.Version, "have": baseVersion},
 				})
 			}
 			continue
@@ -270,6 +272,7 @@ func validateAssetDependencies(asset ModAsset, enabledByName map[string]ModAsset
 				Level:   "error",
 				Code:    "missing_dependency",
 				Message: fmt.Sprintf("Mod %s %s requires %s", asset.Name, asset.Version, name),
+					Params:  map[string]string{"mod": asset.Name, "version": asset.Version, "dep": name},
 			})
 		}
 	}

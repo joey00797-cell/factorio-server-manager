@@ -29,6 +29,7 @@ const Input = ({
             max={max}
             value={value}
             disabled={disabled}
+            style={disabled ? {color: "#e5e5e5", backgroundColor: "#4a4a4a", cursor: "not-allowed"} : undefined}
             {...(onChange ? {onChange} : {})}
         />
     )

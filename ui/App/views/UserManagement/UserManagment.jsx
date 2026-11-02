@@ -46,7 +46,7 @@ const UserManagement = () => {
                             <tr className="py-1" key={user.username}>
                                 <td className="pr-4">{user.username}</td>
                                 <td className="pr-4">{user.role}</td>
-                                <td className="pr-4">{user.email}</td>
+                                <td className="pr-4">{user.email || "—"}</td>
                                 <td>
                                     <FontAwesomeIcon className="text-red cursor-pointer hover:text-red-light mr-2" onClick={() => deleteUser(user.username)} icon={faTrashAlt}/>
                                 </td>

@@ -259,8 +259,8 @@ const ServerSettings = () => {
                                 }
 
                                 const value = settings[key]
-                                const label = key.replaceAll('_', ' ')
-                                const comment = settings["_comment_" + key]
+                                const label = t(`server_settings.${key}`, key.replaceAll('_', ' '))
+                                const comment = settings["_comment_" + key] ? t(`server_settings._comment_${key}`, settings["_comment_" + key]) : null
 
                                 return (
                                     <div className="mb-4" key={`wrapper-${key}`}>

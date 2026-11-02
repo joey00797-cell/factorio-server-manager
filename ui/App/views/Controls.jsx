@@ -290,10 +290,10 @@ const Controls = () => {
                             const isBusy = !!busyVersion[selKey] || (isOther && !selKey);
                             let badgeClass = "text-xs px-2 py-1 ";
                             let badgeText = "";
-                            if (isInstalled && isDownloaded) { badgeClass += "text-green"; badgeText = "✓ installed · zip cached"; }
-                            else if (isInstalled && !isDownloaded) { badgeClass += "text-green"; badgeText = "✓ installed"; }
-                            else if (!isInstalled && isDownloaded) { badgeClass += "text-orange"; badgeText = "zip cached · not installed"; }
-                            else { badgeClass += "text-gray-400"; badgeText = canInstall ? "not installed · no zip" : "not installed"; }
+                            if (isInstalled && isDownloaded) { badgeClass += "text-green"; badgeText = t("controls.badge_installed_cached", "✓ installed · zip cached"); }
+                            else if (isInstalled && !isDownloaded) { badgeClass += "text-green"; badgeText = t("controls.badge_installed", "✓ installed"); }
+                            else if (!isInstalled && isDownloaded) { badgeClass += "text-orange"; badgeText = t("controls.badge_cached", "zip cached · not installed"); }
+                            else { badgeClass += "text-gray-400"; badgeText = canInstall ? t("controls.badge_no_zip", "not installed · no zip") : t("controls.badge_not_installed", "not installed"); }
                             return (
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
                                     <div className="flex gap-2">
@@ -329,7 +329,7 @@ const Controls = () => {
                                         ))}
                                     </select>
                                     {!canInstall && installedVersions.length === 0 && (
-                                        <span className="text-orange text-xs">No Factorio version installed. Run prepare-factorio.bat and reload the page.</span>
+                                        <span className="text-orange text-xs">{t("controls.no_version", "No Factorio version installed. Run prepare-factorio.bat and reload the page.")}</span>
                                     )}
                                     {isOther && (
                                         <input
@@ -575,7 +575,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <div>
-                    <div className="font-bold mb-1">IP</div>
+                    <div className="font-bold mb-1 text-dirty-white">IP</div>
                     <input
                         className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
                         value={ipDraft}
@@ -585,7 +585,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     />
                 </div>
                 <div>
-                    <div className="font-bold mb-1">{t("controls.port")}</div>
+                    <div className="font-bold mb-1 text-dirty-white">{t("controls.port")}</div>
                     <input
                         type="number"
                         min={1}
@@ -598,7 +598,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     />
                 </div>
                 <div>
-                    <div className="font-bold mb-1">{t("controls.version", "Version")}</div>
+                    <div className="font-bold mb-1 text-dirty-white">{t("controls.version", "Version")}</div>
                     <select
                         className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
                         value={versionDraft}
@@ -613,7 +613,7 @@ const ServerCard = ({server, saves, selectedSave, setSelectedSave, busy, runActi
                     </select>
                 </div>
                 <div>
-                    <div className="font-bold mb-1">{t("controls.save")}</div>
+                    <div className="font-bold mb-1 text-dirty-white">{t("controls.save")}</div>
                     <select
                         className="shadow appearance-none border w-full py-1 px-2 text-black text-sm"
                         value={running ? (server.savefile || "") : selectedSave}

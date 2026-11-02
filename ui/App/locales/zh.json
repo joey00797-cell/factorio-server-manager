@@ -151,7 +151,13 @@
         "other_version": "其他...",
         "other_version_hint": "输入具体的 Factorio 版本号，例如 2.0.76。完整列表：factorio.com/download/archive",
         "settings": "设置",
-        "version": "版本"
+        "version": "版本",
+        "badge_installed_cached": "✓ 已安装 · 已缓存 zip",
+        "badge_installed": "✓ 已安装",
+        "badge_cached": "已缓存 zip · 未安装",
+        "badge_no_zip": "未安装 · 无 zip",
+        "badge_not_installed": "未安装",
+        "no_version": "未安装 Factorio 版本。请运行 prepare-factorio.bat 并刷新页面。"
     },
     "servers": {
         "create": "创建服务器",
@@ -251,7 +257,14 @@
         "upload": "上传",
         "upload_error": "上传失败",
         "upload_success": "模组已上传到库",
-        "upload_zip": "⬆ 上传 ZIP..."
+        "upload_zip": "⬆ 上传 ZIP...",
+        "sync_match": "匹配存档 — 启用存档中的模组，禁用其他",
+        "sync_add": "从存档添加 — 仅启用存档中的模组",
+        "mod_settings_missing": "此服务器的 mod-settings.dat 尚不存在",
+        "issue_missing_dependency": "模组 {{mod}} {{version}} 需要 {{dep}}",
+        "issue_incompatible_mod": "模组 {{mod}} {{version}} 与 {{dep}} 不兼容",
+        "issue_factorio_version": "模组 {{mod}} {{version}} 需要 Factorio {{op}} {{need}}，服务器版本为 {{have}}",
+        "issue_server_running": "应用模组前必须先停止服务器。"
     },
     "login": {
         "login_failed_message": "登录失败。用户名或密码错误。",

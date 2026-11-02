@@ -283,11 +283,11 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                                 <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 z-50 shadow-lg" style={{minWidth: "180px"}}>
                                     <div className="px-3 py-2 cursor-pointer hover:bg-orange text-black text-sm"
                                         onClick={() => syncFromSave("match")}>
-                                        Match save — enable save mods, disable others
+                                        {t("mods.sync_match", "Match save — enable save mods, disable others")}
                                     </div>
                                     <div className="px-3 py-2 cursor-pointer hover:bg-orange text-black text-sm"
                                         onClick={() => syncFromSave("add")}>
-                                        Add from save — only enable save mods
+                                        {t("mods.sync_add", "Add from save — only enable save mods")}
                                     </div>
                                 </div>
                             )}
@@ -372,7 +372,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                     <div className="font-bold text-sm mb-2">{t("mods.apply_preview", "Apply Preview")}</div>
                     <div className="text-sm">
                         {preview.issues?.length > 0 && preview.issues.map((issue, i) => (
-                            <div key={i} className="text-red mb-1">⚠ {issue.message}</div>
+                            <div key={i} className="text-red mb-1">⚠ {t("mods.issue_" + issue.code, {defaultValue: issue.message, ...(issue.params || {}), interpolation: {escapeValue: false}})}</div>
                         ))}
                         {preview.needs_server_stop && (
                             <div className="text-orange mb-2">{t("mods.needs_server_stop", "Server must be stopped before applying.")}</div>
@@ -406,7 +406,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                             {(preview.issues || []).some(i => i.code === "missing_dependency") && (() => {
                                 const missingNames = (preview.issues || [])
                                     .filter(i => i.code === "missing_dependency")
-                                    .map(i => i.message.match(/requires (.+)$/)?.[1])
+                                    .map(i => i.params?.dep || i.message.match(/requires (.+)$/)?.[1])
                                     .filter(Boolean);
                                 const allLocal = missingNames.every(name =>
                                     (libraryMods || []).some(m => m.name === name)
