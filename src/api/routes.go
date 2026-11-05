@@ -312,6 +312,12 @@ var apiRoutes = Routes{
 		WipeServerInstanceHandler,
 		true,
 	}, {
+		"GetVersionInfo",
+		"GET",
+		"/app/version",
+		GetVersionInfoHandler,
+		false,
+	}, {
 		"RunSaveBackup",
 		"POST",
 		"/servers/{serverID}/saves/backups/run",

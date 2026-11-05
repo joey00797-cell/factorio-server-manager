@@ -405,5 +405,25 @@
         "loaded": "Preset \"{{name}}\" loaded",
         "deleted": "Preset \"{{name}}\" deleted",
         "load_confirm": "Load preset \"@@@\"? This will replace current manifest."
+    },
+    "app_update": {
+        "available": "Update available",
+        "title": "FSM version",
+        "installed": "Installed",
+        "latest": "Latest release",
+        "up_to_date": "You are running the latest version.",
+        "dev_build": "Development build, update checks are off.",
+        "notes": "What's new",
+        "release_page": "Open the release page",
+        "how_title": "How to update",
+        "how_docker": "Pull the new image, then start FSM again with fsm-start.sh from your fsm-data folder:",
+        "how_linux": "Stop FSM, then run this in the install directory:",
+        "how_windows": "Download the Windows archive from the release page and extract it over the current folder. Your data is kept.",
+        "close": "Close",
+        "dev_label": "build: dev",
+        "tip_dev": "Development build, update checks are off. Click for details.",
+        "tip_update": "Update available: {{latest}} (installed {{installed}}). Click for notes and update steps.",
+        "tip_ok": "Installed {{installed}}, latest {{latest}}. Click for details.",
+        "tip_installed": "Installed {{installed}}. Click for details."
     }
 }

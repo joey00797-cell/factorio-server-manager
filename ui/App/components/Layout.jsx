@@ -5,6 +5,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars} from "@fortawesome/free-solid-svg-icons";
 import {Flash} from "./Flash";
 import ChangeLangDialog from "./ChangeLangDialog";
+import VersionBadge from "./VersionBadge";
 import { useTranslation } from "react-i18next";
 import {ServersProvider, useServers} from "../context/ServersContext";
 
@@ -65,7 +66,7 @@ const LayoutContent = ({handleLogout}) => {
             <div className="w-full md:w-88 md:fixed md:top-0 md:left-0 bg-gray-dark md:h-screen overflow-y-auto">
                 <div className="py-4 px-2 accentuated">
                     <div className="mx-4 justify-between flex text-center">
-                        <span className="text-dirty-white text-xl">{t("main_title")}</span>
+                        <VersionBadge/>
                         <button
                             className="md:hidden cursor-pointer text-white hover:text-dirty-white"
                             onClick={() => setIsNavCollapsed(!isNavCollapsed)}

@@ -405,5 +405,25 @@
         "loaded": "预设“{{name}}”已加载",
         "deleted": "预设“{{name}}”已删除",
         "load_confirm": "加载预设“@@@”？这将替换当前清单。"
+    },
+    "app_update": {
+        "available": "有可用更新",
+        "title": "FSM 版本",
+        "installed": "已安装",
+        "latest": "最新版本",
+        "up_to_date": "您使用的已是最新版本。",
+        "dev_build": "开发构建，已关闭更新检查。",
+        "notes": "更新内容",
+        "release_page": "打开发布页面",
+        "how_title": "如何更新",
+        "how_docker": "拉取新镜像，然后使用 fsm-data 文件夹中的 fsm-start.sh 重新启动 FSM：",
+        "how_linux": "停止 FSM，然后在安装目录中运行：",
+        "how_windows": "从发布页面下载 Windows 压缩包，并解压覆盖当前文件夹。您的数据会保留。",
+        "close": "关闭",
+        "dev_label": "构建：dev",
+        "tip_dev": "开发构建，已关闭更新检查。点击查看详情。",
+        "tip_update": "有可用更新：{{latest}}（当前 {{installed}}）。点击查看更新内容和更新步骤。",
+        "tip_ok": "当前 {{installed}}，最新 {{latest}}。点击查看详情。",
+        "tip_installed": "当前 {{installed}}。点击查看详情。"
     }
 }
