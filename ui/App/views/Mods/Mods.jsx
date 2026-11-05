@@ -310,8 +310,8 @@ const Mods = () => {
                             {bulkMenu ? <>
                                 <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("remove"); }}>From server</Button>
                                 <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("purge"); }}>From library (permanent)</Button>
-                                <Button size="sm" className="mr-2" type="default" onClick={() => setBulkMenu(false)}>Cancel</Button>
-                            </> : <Button size="sm" className="mr-2" type="danger" onClick={() => setBulkMenu(true)}>Remove all</Button>}
+                                <Button size="sm" className="mr-2" type="default" onClick={() => setBulkMenu(false)}>{t("cancel")}</Button>
+                            </> : <Button size="sm" className="mr-2" type="danger" onClick={() => setBulkMenu(true)}>{t("mods.remove_all", "Remove all")}</Button>}
                         </>}
                         <a className="bg-gray-light py-1 px-2 hover:glow-orange hover:bg-orange inline-block accentuated text-black font-bold"
                            href={modsResource.downloadAllURL(serverId)}>{t("mods.download_all")}</a>

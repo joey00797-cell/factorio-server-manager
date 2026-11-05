@@ -38,7 +38,7 @@ const ModOptionsTab = ({serverId}) => {
     return (
         <div>
             <div className="mb-4 text-sm italic">
-                {data.note ? t("mods.mod_settings_missing", "mod-settings.dat does not exist yet for this server") : t("mods.mod_options_raw_note", "Edit the raw base64 encoded mod-settings.dat for this server.")}
+                {!data.exists ? t("mods.mod_settings_missing", "mod-settings.dat does not exist yet for this server") : t("mods.mod_options_raw_note", "Edit the raw base64 encoded mod-settings.dat for this server.")}
             </div>
             <div className="mb-4">
                 <div className="font-bold">{t("saves.size")}</div>

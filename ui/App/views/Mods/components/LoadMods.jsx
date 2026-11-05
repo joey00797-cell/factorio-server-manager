@@ -97,7 +97,7 @@ const LoadMods = ({refreshMods, serverId}) => {
                 setCurrentMod(null);
                 setCurrentBytes(0);
                 setTotalBytes(0);
-                setSyncError(data.message);
+                setSyncError(data.code ? t("mods.sync_" + data.code, {defaultValue: data.message}) : data.message);
             }
         };
 

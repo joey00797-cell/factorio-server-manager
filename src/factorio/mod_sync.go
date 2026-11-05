@@ -77,6 +77,7 @@ type ModSyncProgress struct {
 	Total        int             `json:"total,omitempty"`
 	Mod          string          `json:"mod,omitempty"`
 	Message      string          `json:"message,omitempty"`
+	Code      string          `json:"code,omitempty"`
 	Warning      string          `json:"warning,omitempty"`
 	Mods         []ModSyncResult `json:"mods,omitempty"`
 	CurrentBytes int64           `json:"current_bytes,omitempty"`
@@ -423,7 +424,7 @@ func SyncModsFromSaveForDir(db *gorm.DB, savePath string, modsDir string, server
 	}
 	log.Printf("SyncModsFromSave: portalReady=%v toDownload=%d", portalReady, total)
 	if !portalReady {
-		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Message: "Some mods are missing from the library. Log in to the mod portal to download them.", Mods: results})
+		sendSyncProgressForServer(serverID, ModSyncProgress{Status: "error", Code: "missing_in_library", Message: "Some mods are missing from the library. Log in to the mod portal to download them.", Mods: results})
 		return
 	}
 

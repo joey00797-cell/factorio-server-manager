@@ -124,7 +124,8 @@
         "rename_error": "Failed to rename backup",
         "restore_here": "Restore here",
         "schedule_error": "Failed to save schedule",
-        "schedule_saved": "Backup schedule saved"
+        "schedule_saved": "Backup schedule saved",
+        "date": "Date"
     },
     "controls": {
         "title": "Server Manager",
@@ -264,7 +265,13 @@
         "issue_missing_dependency": "Mod {{mod}} {{version}} requires {{dep}}",
         "issue_incompatible_mod": "Mod {{mod}} {{version}} is incompatible with {{dep}}",
         "issue_factorio_version": "Mod {{mod}} {{version}} needs Factorio {{op}} {{need}}, server has {{have}}",
-        "issue_server_running": "Server must be stopped before applying mods."
+        "issue_server_running": "Server must be stopped before applying mods.",
+        "sync_deps_success": "Synced {{n}} dependencies",
+        "remove_all": "Remove all",
+        "portal_login_hint": "Log in to mod portal to download exact versions, or use library versions.",
+        "col_version": "Version",
+        "col_compatibility": "Compatibility",
+        "sync_missing_in_library": "Some mods are missing from the library. Log in to the mod portal to download them."
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",
@@ -390,6 +397,9 @@
         "load_preset": "Load Preset",
         "save": "Save",
         "save_error": "Failed to save preset",
-        "title": "Mod Presets"
+        "title": "Mod Presets",
+        "loaded": "Preset \"{{name}}\" loaded",
+        "deleted": "Preset \"{{name}}\" deleted",
+        "load_confirm": "Load preset \"@@@\"? This will replace current manifest."
     }
 }

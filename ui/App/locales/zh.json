@@ -124,7 +124,8 @@
         "rename_error": "重命名备份失败",
         "restore_here": "恢复到此处",
         "schedule_error": "保存备份计划失败",
-        "schedule_saved": "备份计划已保存"
+        "schedule_saved": "备份计划已保存",
+        "date": "日期"
     },
     "controls": {
         "title": "实例",
@@ -264,7 +265,13 @@
         "issue_missing_dependency": "模组 {{mod}} {{version}} 需要 {{dep}}",
         "issue_incompatible_mod": "模组 {{mod}} {{version}} 与 {{dep}} 不兼容",
         "issue_factorio_version": "模组 {{mod}} {{version}} 需要 Factorio {{op}} {{need}}，服务器版本为 {{have}}",
-        "issue_server_running": "应用模组前必须先停止服务器。"
+        "issue_server_running": "应用模组前必须先停止服务器。",
+        "sync_deps_success": "已同步 {{n}} 个依赖",
+        "remove_all": "全部移除",
+        "portal_login_hint": "请登录模组门户以下载精确版本，或使用库中的版本。",
+        "col_version": "版本",
+        "col_compatibility": "兼容性",
+        "sync_missing_in_library": "库中缺少部分模组。请登录模组门户下载。"
     },
     "login": {
         "login_failed_message": "登录失败。用户名或密码错误。",
@@ -390,6 +397,9 @@
         "load_preset": "加载预设",
         "save": "保存",
         "save_error": "保存预设失败",
-        "title": "模组预设"
+        "title": "模组预设",
+        "loaded": "预设“{{name}}”已加载",
+        "deleted": "预设“{{name}}”已删除",
+        "load_confirm": "加载预设“@@@”？这将替换当前清单。"
     }
 }

@@ -25,7 +25,7 @@ const PresetItem = ({preset, serverId, onLoaded, onDeleted}) => {
         setIsLoading(true);
         presetsResource.load(serverId, preset.name)
             .then(() => {
-                window.flash(t("presets.loaded", `Preset "${preset.name}" loaded`), "green");
+                window.flash(t("presets.loaded", {defaultValue: `Preset "${preset.name}" loaded`, name: preset.name, interpolation: {escapeValue: false}}), "green");
                 if (onLoaded) onLoaded();
             })
             .catch(() => window.flash(t("presets.load_error", "Failed to load preset"), "red"))
@@ -35,7 +35,7 @@ const PresetItem = ({preset, serverId, onLoaded, onDeleted}) => {
     const deletePreset = () => {
         presetsResource.delete(serverId, preset.name)
             .then(() => {
-                window.flash(t("presets.deleted", `Preset "${preset.name}" deleted`), "green");
+                window.flash(t("presets.deleted", {defaultValue: `Preset "${preset.name}" deleted`, name: preset.name, interpolation: {escapeValue: false}}), "green");
                 if (onDeleted) onDeleted();
             })
             .catch(() => window.flash(t("presets.delete_error", "Failed to delete preset"), "red"));

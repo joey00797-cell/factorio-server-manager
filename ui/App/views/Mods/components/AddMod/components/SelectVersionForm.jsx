@@ -46,9 +46,9 @@ const SelectVersionForm = ({releases, isOpen, close, install, serverId}) => {
                     <table className="w-full">
                         <thead>
                         <tr className="text-left py-1">
-                            <th>Version</th>
-                            <th>Compatibility</th>
-                            <th>Actions</th>
+                            <th>{t("mods.col_version", "Version")}</th>
+                            <th>{t("mods.col_compatibility", "Compatibility")}</th>
+                            <th>{t("actions")}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -69,7 +69,7 @@ const SelectVersionForm = ({releases, isOpen, close, install, serverId}) => {
                 </div>
             }
             actions={
-                <Button onClick={close} size="sm" type="danger">Cancel</Button>
+                <Button onClick={close} size="sm" type="danger">{t("cancel")}</Button>
             }
         />
     )

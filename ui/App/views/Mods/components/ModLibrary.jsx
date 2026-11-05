@@ -86,7 +86,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
             } else if (data.status === "error") {
                 setIsSyncing(false);
                 setSyncProgress(null);
-                window.flash(t("mods.sync_error", "Sync failed: ") + (data.message || ""), "red");
+                window.flash(t("mods.sync_error", "Sync failed: ") + (data.code ? t("mods.sync_" + data.code, {defaultValue: data.message || ""}) : (data.message || "")), "red");
             }
         };
         const resubscribe = () => socket.emit('mods sync subscribe', serverId);
@@ -191,7 +191,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
             const downloaded = (results || []).filter(r => r.status === "downloaded").length;
             const fromLib = (results || []).filter(r => r.status === "from_library").length;
             if (downloaded + fromLib > 0) {
-                window.flash(t("mods.sync_deps_success", `Synced ${downloaded + fromLib} dependencies`), "green");
+                window.flash(t("mods.sync_deps_success", {defaultValue: `Synced ${downloaded + fromLib} dependencies`, n: downloaded + fromLib}), "green");
             } else {
                 window.flash(t("mods.sync_deps_none", "All dependencies already satisfied"), "green");
             }
@@ -356,7 +356,7 @@ const ModLibrary = ({serverId, onModUploaded, onApplied, preview, libraryMods = 
                             <span>save: {m.version} · library: {m.available_version}</span>
                         </div>
                     ))}
-                    <div className="text-xs mt-2 opacity-75">Log in to mod portal to download exact versions, or use library versions.</div>
+                    <div className="text-xs mt-2 opacity-75">{t("mods.portal_login_hint", "Log in to mod portal to download exact versions, or use library versions.")}</div>
                     <div className="flex gap-2 mt-3">
                         <button className="px-3 py-1 bg-black text-white text-xs hover:bg-gray-800"
                             onClick={() => setSyncMismatched([])}>

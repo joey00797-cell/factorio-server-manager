@@ -34,11 +34,11 @@ const CreateModPack = ({onSuccess}) => {
                     <Label text={t("name")} htmlFor="name"/>
                     <Input register={register('name',{required: true})}/>
                 </div>
-                <Button size="sm" isLoading={isCreating} isSubmit={true}>Create</Button>
+                <Button size="sm" isLoading={isCreating} isSubmit={true}>{t("create")}</Button>
             </form>
         }
         actions={
-            <Button onClick={() => setIsOpen(false)} size="sm" type="danger">Cancel</Button>
+            <Button onClick={() => setIsOpen(false)} size="sm" type="danger">{t("cancel")}</Button>
         }
         />
     </>
