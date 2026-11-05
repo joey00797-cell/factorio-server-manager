@@ -77,7 +77,7 @@ if [ -f .fsm-version ] && need curl; then
     CURV=$(cat .fsm-version)
     if [ -n "$LATEST" ] && [ "$LATEST" != "$CURV" ]; then
         echo "Update available: $LATEST (installed $CURV). Stop FSM and run:"
-        echo "  curl -fsSL https://raw.githubusercontent.com/joey00797-cell/factorio-server-manager/master/install.sh | FSM_DIR=$PWD bash"
+        echo "  curl -fsSLO https://raw.githubusercontent.com/joey00797-cell/factorio-server-manager/master/install.sh && FSM_DIR=$PWD bash install.sh"
         echo ""
     fi
 fi

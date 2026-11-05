@@ -1,6 +1,7 @@
 # Build tool for Factorio Server Manager
 
 NODE_ENV:=production
+VERSION ?= dev
 
 #TODO add support for a mac build maybe?
 UNAME := $(shell uname)
@@ -30,14 +31,14 @@ factorio-server-manager-linux:
 	@echo "Building Backend - Linux"
 	@mkdir -p factorio-server-manager
 	@cd src; \
-	CGO_ENABLED=0 GO111MODULE=on GOOS=linux GOARCH=amd64 go build -o ../factorio-server-manager/factorio-server-manager .
+	CGO_ENABLED=0 GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags="-X main.Version=$(VERSION)" -o ../factorio-server-manager/factorio-server-manager .
 	@cp linux/start.sh factorio-server-manager/start.sh && chmod +x factorio-server-manager/start.sh
 
 factorio-server-manager-windows:
 	@echo "Building Backend - Windows"
 	@mkdir -p factorio-server-manager
 	@cd src; \
-	GO111MODULE=on GOOS=windows GOARCH=amd64 CGO_ENABLED=0 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -ldflags="-extldflags=-static" -o ../factorio-server-manager/factorio-server-manager.exe .
+	GO111MODULE=on GOOS=windows GOARCH=amd64 CGO_ENABLED=0 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -ldflags="-extldflags=-static -X main.Version=$(VERSION)" -o ../factorio-server-manager/factorio-server-manager.exe .
 	@printf '@echo off\r\ncd /d "%%~dp0"\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%%~dp0start.ps1"\r\npause\r\n' > factorio-server-manager/start.bat
 	@cp windows/prepare-factorio.bat windows/prepare-factorio.ps1 windows/start.ps1 factorio-server-manager/
 

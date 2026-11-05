@@ -24,6 +24,8 @@ RUN sed -i 's/\r$//' /usr/local/bin/build-release.sh && chmod u+x /usr/local/bin
 
 VOLUME /build
 VOLUME $FACTORIO_ROOT
+ARG VERSION=dev
+ENV VERSION=$VERSION
 ENV BUILD_WINDOWS=1
 RUN sh /usr/local/bin/build-release.sh
 
