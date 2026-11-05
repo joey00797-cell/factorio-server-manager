@@ -271,7 +271,11 @@
         "portal_login_hint": "请登录模组门户以下载精确版本，或使用库中的版本。",
         "col_version": "版本",
         "col_compatibility": "兼容性",
-        "sync_missing_in_library": "库中缺少部分模组。请登录模组门户下载。"
+        "sync_missing_in_library": "库中缺少部分模组。请登录模组门户下载。",
+        "enable_all": "全部启用",
+        "disable_all": "全部禁用",
+        "remove_from_server": "从服务器",
+        "remove_from_library": "从库中（永久）"
     },
     "login": {
         "login_failed_message": "登录失败。用户名或密码错误。",

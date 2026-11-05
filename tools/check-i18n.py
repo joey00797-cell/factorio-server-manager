@@ -30,8 +30,15 @@ print("\n== Английский текст прямо в JSX (шумно, см�
 for f in root.rglob("*.jsx"):
     for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
         s = line.strip()
-        if "t(" in s or s.startswith(("//", "import", "*")): continue
+        if re.search(r"\bt\(", s) or s.startswith(("//", "import", "*")): continue
         for m in re.finditer(r">\s*([A-Z][A-Za-z][A-Za-z ,.'\-—:!?]{2,})\s*<", s):
             print(f"{f}:{i}: {m.group(1)}")
         for m in re.finditer(r"(?:placeholder|title|label)=\"([A-Za-z][^\"{]{2,})\"", s):
             print(f"{f}:{i}: attr {m.group(1)}")
+
+print("\n== Значения, совпадающие с английским (возможный недоперевод)")
+for lang, d in langs.items():
+    if lang == "en": continue
+    same = sorted(k for k, v in d.items() if isinstance(v, str) and v == en.get(k) and re.search(r"[A-Za-z]{4,}", v))
+    print(f"[{lang}] {len(same)}")
+    for k in same: print("   ", k, "=", d[k][:60])

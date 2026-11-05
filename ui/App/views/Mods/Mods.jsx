@@ -305,11 +305,11 @@ const Mods = () => {
                                     onClick={updateAllMods}>{t("mods.update_all")}</Button>
                         }
                         {!disabled && <>
-                            <Button size="sm" className="mr-2" type="success" onClick={() => bulkSet("enable")}>Enable all</Button>
-                            <Button size="sm" className="mr-2" type="default" onClick={() => bulkSet("disable")}>Disable all</Button>
+                            <Button size="sm" className="mr-2" type="success" onClick={() => bulkSet("enable")}>{t("mods.enable_all", "Enable all")}</Button>
+                            <Button size="sm" className="mr-2" type="default" onClick={() => bulkSet("disable")}>{t("mods.disable_all", "Disable all")}</Button>
                             {bulkMenu ? <>
-                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("remove"); }}>From server</Button>
-                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("purge"); }}>From library (permanent)</Button>
+                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("remove"); }}>{t("mods.remove_from_server", "From server")}</Button>
+                                <Button size="sm" className="mr-2" type="danger" onClick={() => { setBulkMenu(false); bulkSet("purge"); }}>{t("mods.remove_from_library", "From library (permanent)")}</Button>
                                 <Button size="sm" className="mr-2" type="default" onClick={() => setBulkMenu(false)}>{t("cancel")}</Button>
                             </> : <Button size="sm" className="mr-2" type="danger" onClick={() => setBulkMenu(true)}>{t("mods.remove_all", "Remove all")}</Button>}
                         </>}

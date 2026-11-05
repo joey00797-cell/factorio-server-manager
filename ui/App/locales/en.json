@@ -271,7 +271,11 @@
         "portal_login_hint": "Log in to mod portal to download exact versions, or use library versions.",
         "col_version": "Version",
         "col_compatibility": "Compatibility",
-        "sync_missing_in_library": "Some mods are missing from the library. Log in to the mod portal to download them."
+        "sync_missing_in_library": "Some mods are missing from the library. Log in to the mod portal to download them.",
+        "enable_all": "Enable all",
+        "disable_all": "Disable all",
+        "remove_from_server": "From server",
+        "remove_from_library": "From library (permanent)"
     },
     "login": {
         "login_failed_message": "Login failed. Username or Password wrong.",
