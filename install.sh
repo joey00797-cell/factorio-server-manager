@@ -65,7 +65,7 @@ main() {
         done
     fi
 
-    local tmp; tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     echo "Downloading $url"
     curl -fL --progress-bar -o "$tmp/fsm.zip" "$url" || { echo "Download failed"; exit 1; }
 
