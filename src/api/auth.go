@@ -26,12 +26,19 @@ type Auth struct {
 var (
 	sessionStore *sessions.CookieStore
 	auth         Auth
+	// Name of the session cookie. Cookies are shared between ports on the
+	// same host, so non-default ports get their own name.
+	sessionCookieName = "authentication"
 )
 
 func SetupAuth() {
 	var err error
 
 	config := bootstrap.GetConfig()
+
+	if config.ServerPort != "" && config.ServerPort != "80" {
+		sessionCookieName = "authentication-" + config.ServerPort
+	}
 
 	cookieEncryptionKey, err := base64.StdEncoding.DecodeString(config.CookieEncryptionKey)
 	if err != nil {
@@ -226,7 +233,7 @@ func (a *Auth) changePassword(username, password string) error {
 // middleware function, that will be called for every request, that has to be authorized
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := sessionStore.Get(r, "authentication")
+		session, err := sessionStore.Get(r, sessionCookieName)
 		if err != nil {
 			if session != nil {
 				session.Options.MaxAge = -1

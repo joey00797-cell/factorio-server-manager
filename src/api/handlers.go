@@ -687,7 +687,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, resp, err := ReadSessionStore(w, r, "authentication")
+	session, resp, err := ReadSessionStore(w, r, sessionCookieName)
 	if err != nil {
 		return
 	}
@@ -715,7 +715,7 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
-	session, resp, err := ReadSessionStore(w, r, "authentication")
+	session, resp, err := ReadSessionStore(w, r, sessionCookieName)
 	if err != nil {
 		return
 	}
@@ -741,7 +741,7 @@ func GetCurrentLogin(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
-	session, resp, err := ReadSessionStore(w, r, "authentication")
+	session, resp, err := ReadSessionStore(w, r, sessionCookieName)
 	if err != nil {
 		return
 	}
@@ -868,7 +868,7 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	// only allow to change its own password
 	// get username from session cookie
-	session, resp, err := ReadSessionStore(w, r, "authentication")
+	session, resp, err := ReadSessionStore(w, r, sessionCookieName)
 	if err != nil {
 		return
 	}
