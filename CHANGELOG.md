@@ -2,6 +2,15 @@
 
 Changes of this fork. History of the original project: [CHANGELOG-upstream.md](CHANGELOG-upstream.md). Detailed items: [ROADMAP.md](ROADMAP.md).
 
+## [6.7.4] - 2026-11-06
+### Added
+- Version indicator in the header: installed version, "Update available" badge, release notes and update steps for Docker, Linux and Windows installs (`FSM_UPDATE_CHECK=false` turns the check off)
+- Releases: `tools/release.sh` builds the archives and publishes a GitHub release with `SHA256SUMS`
+- `install.sh` verifies the archive checksum, supports `FSM_DIR`, `FSM_VERSION` and `FSM_YES`, and keeps the installed version in `.fsm-version`
+
+### Fixed
+- Several FSM instances on one host (different ports) no longer log each other out: the session cookie name now includes the port (port 80 keeps the old name)
+
 ## [6.7.3] - 2026-11-05
 ### Fixed
 - Dark theme contrast: server header badges, server card labels, disabled role field; empty email shows "—" (#15)
